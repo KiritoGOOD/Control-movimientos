@@ -46,8 +46,21 @@ function guardar(){
 }
 
 function num(v){
-  const n = Number(v || 0);
+  const limpio = String(v ?? "").replace(/\./g,"").replace(/\s/g,"").replace(/[^0-9-]/g,"");
+  const n = Number(limpio || 0);
   return Number.isFinite(n) ? n : 0;
+}
+
+function formatearCampoGs(input){
+  const soloDigitos = String(input.value || "").replace(/\D/g,"");
+  if(!soloDigitos){ input.value = ""; return; }
+  input.value = new Intl.NumberFormat("es-PY", {maximumFractionDigits:0}).format(Number(soloDigitos));
+}
+
+function activarFormatoGs(id){
+  const input = $(id);
+  if(!input) return;
+  input.addEventListener("input", ()=>formatearCampoGs(input));
 }
 
 function normalizarNombre(s){
@@ -92,8 +105,8 @@ function editar(id){
   editId = id;
   $("eFecha").value = m.fecha;
   $("eNombre").value = m.nombre;
-  $("eIngreso").value = m.ingreso || "";
-  $("eEgreso").value = m.egreso || "";
+  $("eIngreso").value = m.ingreso ? numFmt.format(m.ingreso) : "";
+  $("eEgreso").value = m.egreso ? numFmt.format(m.egreso) : "";
   $("eObs").value = m.observacion || "";
   $("editDialog").showModal();
 }
@@ -235,6 +248,7 @@ function importarArchivo(file){
 
 document.addEventListener("DOMContentLoaded", ()=>{
   $("fecha").value = hoyISO();
+  ["ingreso","egreso","eIngreso","eEgreso"].forEach(activarFormatoGs);
   render();
 
   $("prevMonth").addEventListener("click", ()=>{

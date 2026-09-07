@@ -145,11 +145,11 @@
         </div>
         <div>
           <label for="ingreso">Carga (Gs.)</label>
-          <input id="ingreso" type="number" inputmode="decimal" min="0" step="1" placeholder="0">
+          <input id="ingreso" type="text" inputmode="numeric" placeholder="0">
         </div>
         <div>
           <label for="egreso">Retiro (Gs.)</label>
-          <input id="egreso" type="number" inputmode="decimal" min="0" step="1" placeholder="0">
+          <input id="egreso" type="text" inputmode="numeric" placeholder="0">
         </div>
         <div style="grid-column:1/-1">
           <label for="obs">Observación</label>
@@ -242,8 +242,8 @@
     <div class="form-grid">
       <div><label>Fecha</label><input id="eFecha" type="date"></div>
       <div><label>Nombre</label><input id="eNombre"></div>
-      <div><label>Carga</label><input id="eIngreso" type="number" min="0"></div>
-      <div><label>Retiro</label><input id="eEgreso" type="number" min="0"></div>
+      <div><label>Carga</label><input id="eIngreso" type="text" inputmode="numeric"></div>
+      <div><label>Retiro</label><input id="eEgreso" type="text" inputmode="numeric"></div>
       <div style="grid-column:1/-1"><label>Observación</label><textarea id="eObs"></textarea></div>
     </div>
     <div class="actions">
