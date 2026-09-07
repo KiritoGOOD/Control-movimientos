@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f3d5e" />
+  <meta name="description" content="Control local de ingresos y egresos, sin servidor y sin costo." />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon-192.png" />
+  <title>Control de Movimientos</title>
+  <style>
+    :root{
+      --bg:#f4f7fb; --card:#ffffff; --text:#17212b; --muted:#6b7280;
+      --primary:#0f3d5e; --primary2:#155b87; --success:#15803d;
+      --danger:#b91c1c; --warning:#b45309; --line:#dfe7ef;
+      --shadow:0 8px 30px rgba(15,61,94,.08);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;background:var(--bg);color:var(--text);
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    }
+    .app{max-width:1050px;margin:0 auto;padding:16px 16px 92px}
+    .topbar{
+      position:sticky;top:0;z-index:20;
+      background:rgba(244,247,251,.92);backdrop-filter:blur(10px);
+      padding:12px 0 10px;
+    }
+    .brand{
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+    }
+    .brand h1{font-size:22px;margin:0;color:var(--primary)}
+    .brand small{display:block;color:var(--muted);margin-top:3px}
+    .pill{
+      font-size:12px;padding:7px 10px;border-radius:999px;background:#e7f1f7;color:var(--primary);font-weight:700
+    }
+    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
+    @media(max-width:820px){.grid{grid-template-columns:1fr}}
+    .card{
+      background:var(--card);border:1px solid var(--line);border-radius:18px;
+      box-shadow:var(--shadow);padding:16px;
+    }
+    .card h2{font-size:16px;margin:0 0 14px}
+    .form-grid{
+      display:grid;grid-template-columns:1fr 1fr;gap:12px
+    }
+    @media(max-width:640px){.form-grid{grid-template-columns:1fr}}
+    label{font-size:12px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px}
+    input,textarea,select{
+      width:100%;border:1px solid #cfd9e3;border-radius:12px;padding:12px 13px;
+      font:inherit;background:#fff;color:var(--text);outline:none;
+    }
+    input:focus,textarea:focus,select:focus{border-color:#5a9ac0;box-shadow:0 0 0 3px rgba(21,91,135,.10)}
+    textarea{min-height:78px;resize:vertical}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    button{
+      border:0;border-radius:12px;padding:12px 15px;font:inherit;font-weight:800;cursor:pointer
+    }
+    .btn-primary{background:var(--primary);color:#fff;flex:1}
+    .btn-secondary{background:#edf3f7;color:var(--primary)}
+    .btn-danger{background:#fde8e8;color:var(--danger)}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    @media(max-width:520px){.stats{grid-template-columns:1fr}}
+    .stat{padding:14px;border-radius:14px;background:#f8fbfd;border:1px solid var(--line)}
+    .stat .k{font-size:12px;color:var(--muted);font-weight:700}
+    .stat .v{font-size:22px;font-weight:900;margin-top:4px}
+    .v.in{color:var(--success)} .v.out{color:var(--danger)} .v.balance{color:var(--primary)}
+    .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+    .toolbar input{flex:1;min-width:180px}
+    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}
+    table{width:100%;border-collapse:collapse;min-width:760px;background:#fff}
+    th,td{padding:11px 12px;border-bottom:1px solid #edf1f5;text-align:left;font-size:13px;white-space:nowrap}
+    th{background:#eef6fb;color:var(--primary);position:sticky;top:0}
+    td.money{text-align:right;font-variant-numeric:tabular-nums}
+    .tag-in{color:var(--success);font-weight:800}
+    .tag-out{color:var(--danger);font-weight:800}
+    .row-actions{display:flex;gap:6px}
+    .row-actions button{padding:7px 9px;border-radius:9px;font-size:12px}
+    .empty{padding:26px;text-align:center;color:var(--muted)}
+    .tabs{
+      display:flex;gap:8px;margin:16px 0 12px;
+      overflow:auto
+    }
+    .tab{
+      background:#eaf0f5;color:#456;padding:10px 14px;border-radius:999px;font-weight:800;white-space:nowrap
+    }
+    .tab.active{background:var(--primary);color:#fff}
+    .section{display:none}.section.active{display:block}
+    .name-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    @media(max-width:700px){.name-summary{grid-template-columns:1fr 1fr}}
+    @media(max-width:420px){.name-summary{grid-template-columns:1fr}}
+    .person{
+      border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff
+    }
+    .person strong{display:block;margin-bottom:7px}
+    .person small{display:block;color:var(--muted);line-height:1.6}
+    .footer-note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5}
+    .install{
+      position:fixed;left:50%;transform:translateX(-50%);bottom:14px;
+      width:min(680px,calc(100% - 28px));display:none;z-index:50
+    }
+    .install-inner{
+      background:#0f3d5e;color:#fff;padding:12px 14px;border-radius:16px;display:flex;gap:12px;align-items:center;box-shadow:0 12px 35px rgba(0,0,0,.18)
+    }
+    .install-inner span{flex:1;font-size:13px}
+    .install-inner button{background:#fff;color:#0f3d5e;padding:9px 12px}
+    dialog{
+      border:0;border-radius:18px;padding:0;max-width:520px;width:calc(100% - 28px);box-shadow:0 24px 70px rgba(0,0,0,.25)
+    }
+    dialog::backdrop{background:rgba(0,0,0,.35)}
+    .modal{padding:18px}
+    .modal h3{margin-top:0}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <div>
+        <h1>Control de Movimientos</h1>
+        <small>Ingresos, egresos y saldos · guardado local</small>
+      </div>
+      <div class="pill">0 USD</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Carga rápida</h2>
+      <div class="form-grid">
+        <div>
+          <label for="fecha">Fecha</label>
+          <input id="fecha" type="date">
+        </div>
+        <div>
+          <label for="nombre">Nombre</label>
+          <input id="nombre" placeholder="Ej.: Ezequiel Palacios" autocomplete="off">
+        </div>
+        <div>
+          <label for="ingreso">Ingreso</label>
+          <input id="ingreso" type="number" inputmode="decimal" min="0" step="1" placeholder="0">
+        </div>
+        <div>
+          <label for="egreso">Egreso</label>
+          <input id="egreso" type="number" inputmode="decimal" min="0" step="1" placeholder="0">
+        </div>
+        <div style="grid-column:1/-1">
+          <label for="obs">Observación</label>
+          <textarea id="obs" placeholder="Opcional"></textarea>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-primary" id="agregar">AGREGAR</button>
+        <button class="btn-secondary" id="limpiar">Limpiar</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Resumen general</h2>
+      <div class="stats">
+        <div class="stat"><div class="k">Ingresos</div><div class="v in" id="totalIngresos">0</div></div>
+        <div class="stat"><div class="k">Egresos</div><div class="v out" id="totalEgresos">0</div></div>
+        <div class="stat"><div class="k">Saldo</div><div class="v balance" id="saldoGeneral">0</div></div>
+      </div>
+      <div class="footer-note" id="contador">0 movimientos</div>
+    </section>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="historial">Historial</button>
+    <button class="tab" data-tab="personas">Resumen por persona</button>
+    <button class="tab" data-tab="backup">Backup / Exportar</button>
+  </div>
+
+  <section id="historial" class="section active card">
+    <div class="toolbar">
+      <input id="buscar" placeholder="Buscar por nombre u observación">
+      <select id="filtroTipo">
+        <option value="todos">Todos</option>
+        <option value="ingreso">Solo ingresos</option>
+        <option value="egreso">Solo egresos</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th><th>Nombre</th><th>Ingreso</th><th>Egreso</th><th>Saldo</th><th>Observación</th><th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty" id="emptyHist">Todavía no hay movimientos.</div>
+    </div>
+  </section>
+
+  <section id="personas" class="section card">
+    <div class="toolbar">
+      <input id="buscarPersona" placeholder="Buscar persona">
+    </div>
+    <div class="name-summary" id="resumenPersonas"></div>
+    <div class="empty" id="emptyPersonas">Todavía no hay personas para resumir.</div>
+  </section>
+
+  <section id="backup" class="section card">
+    <h2>Backup y exportación</h2>
+    <div class="actions">
+      <button class="btn-secondary" id="exportJson">Exportar backup (.json)</button>
+      <button class="btn-secondary" id="exportCsv">Exportar Excel/CSV</button>
+      <button class="btn-secondary" id="importJson">Importar backup</button>
+      <button class="btn-danger" id="borrarTodo">Borrar todos los datos</button>
+    </div>
+    <input id="fileImport" type="file" accept=".json,application/json" hidden>
+    <div class="footer-note">
+      Los datos quedan guardados solo en este dispositivo/navegador. Para no perderlos al cambiar de celular o borrar datos del navegador, exportá un backup periódicamente.
+    </div>
+  </section>
+</div>
+
+<div class="install" id="installBanner">
+  <div class="install-inner">
+    <span>Podés instalar esta app en tu pantalla de inicio.</span>
+    <button id="installBtn">Instalar</button>
+  </div>
+</div>
+
+<dialog id="editDialog">
+  <div class="modal">
+    <h3>Editar movimiento</h3>
+    <div class="form-grid">
+      <div><label>Fecha</label><input id="eFecha" type="date"></div>
+      <div><label>Nombre</label><input id="eNombre"></div>
+      <div><label>Ingreso</label><input id="eIngreso" type="number" min="0"></div>
+      <div><label>Egreso</label><input id="eEgreso" type="number" min="0"></div>
+      <div style="grid-column:1/-1"><label>Observación</label><textarea id="eObs"></textarea></div>
+    </div>
+    <div class="actions">
+      <button class="btn-primary" id="guardarEdicion">Guardar</button>
+      <button class="btn-secondary" id="cancelarEdicion">Cancelar</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>
