@@ -1,4 +1,4 @@
-const CACHE = "control-movimientos-v1";
+const CACHE = "control-movimientos-v2";
 const ASSETS = [
   "./",
   "./index.html",

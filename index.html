@@ -120,7 +120,7 @@
         <h1>Control de Movimientos</h1>
         <small>Ingresos, egresos y saldos · guardado local</small>
       </div>
-      <div class="pill">0 USD</div>
+      <div class="pill">Gs.</div>
     </div>
   </div>
 
@@ -137,11 +137,11 @@
           <input id="nombre" placeholder="Ej.: Ezequiel Palacios" autocomplete="off">
         </div>
         <div>
-          <label for="ingreso">Ingreso</label>
+          <label for="ingreso">Ingreso (Gs.)</label>
           <input id="ingreso" type="number" inputmode="decimal" min="0" step="1" placeholder="0">
         </div>
         <div>
-          <label for="egreso">Egreso</label>
+          <label for="egreso">Egreso (Gs.)</label>
           <input id="egreso" type="number" inputmode="decimal" min="0" step="1" placeholder="0">
         </div>
         <div style="grid-column:1/-1">
@@ -158,9 +158,9 @@
     <section class="card">
       <h2>Resumen general</h2>
       <div class="stats">
-        <div class="stat"><div class="k">Ingresos</div><div class="v in" id="totalIngresos">0</div></div>
-        <div class="stat"><div class="k">Egresos</div><div class="v out" id="totalEgresos">0</div></div>
-        <div class="stat"><div class="k">Saldo</div><div class="v balance" id="saldoGeneral">0</div></div>
+        <div class="stat"><div class="k">Ingresos (Gs.)</div><div class="v in" id="totalIngresos">0</div></div>
+        <div class="stat"><div class="k">Egresos (Gs.)</div><div class="v out" id="totalEgresos">0</div></div>
+        <div class="stat"><div class="k">Saldo (Gs.)</div><div class="v balance" id="saldoGeneral">0</div></div>
       </div>
       <div class="footer-note" id="contador">0 movimientos</div>
     </section>
@@ -185,7 +185,7 @@
       <table>
         <thead>
           <tr>
-            <th>Fecha</th><th>Nombre</th><th>Ingreso</th><th>Egreso</th><th>Saldo</th><th>Observación</th><th>Acciones</th>
+            <th>Fecha</th><th>Nombre</th><th>Ingreso (Gs.)</th><th>Egreso (Gs.)</th><th>Saldo (Gs.)</th><th>Observación</th><th>Acciones</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>

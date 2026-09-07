@@ -4,7 +4,8 @@ let editId = null;
 let deferredPrompt = null;
 
 const $ = (id) => document.getElementById(id);
-const fmt = new Intl.NumberFormat("es-PY", { maximumFractionDigits: 0 });
+const numFmt = new Intl.NumberFormat("es-PY", { maximumFractionDigits: 0 });
+const fmtGs = (n) => `Gs. ${numFmt.format(Number(n || 0))}`;
 
 function hoyISO(){
   const d = new Date();
@@ -99,9 +100,9 @@ function guardarEdicion(){
 function resumenGeneral(){
   const ing = movimientos.reduce((a,m)=>a+num(m.ingreso),0);
   const egr = movimientos.reduce((a,m)=>a+num(m.egreso),0);
-  $("totalIngresos").textContent = fmt.format(ing);
-  $("totalEgresos").textContent = fmt.format(egr);
-  $("saldoGeneral").textContent = fmt.format(ing-egr);
+  $("totalIngresos").textContent = fmtGs(ing);
+  $("totalEgresos").textContent = fmtGs(egr);
+  $("saldoGeneral").textContent = fmtGs(ing-egr);
   $("contador").textContent = `${movimientos.length} movimiento${movimientos.length===1?"":"s"}`;
 }
 
@@ -121,9 +122,9 @@ function renderHistorial(){
     <tr>
       <td>${escapeHtml(m.fecha||"")}</td>
       <td><strong>${escapeHtml(m.nombre)}</strong></td>
-      <td class="money tag-in">${m.ingreso ? fmt.format(m.ingreso) : ""}</td>
-      <td class="money tag-out">${m.egreso ? fmt.format(m.egreso) : ""}</td>
-      <td class="money"><strong>${fmt.format(num(m.ingreso)-num(m.egreso))}</strong></td>
+      <td class="money tag-in">${m.ingreso ? fmtGs(m.ingreso) : ""}</td>
+      <td class="money tag-out">${m.egreso ? fmtGs(m.egreso) : ""}</td>
+      <td class="money"><strong>${fmtGs(num(m.ingreso)-num(m.egreso))}</strong></td>
       <td>${escapeHtml(m.observacion||"")}</td>
       <td>
         <div class="row-actions">
@@ -153,9 +154,9 @@ function renderPersonas(){
   $("resumenPersonas").innerHTML = arr.map(x=>`
     <div class="person">
       <strong>${escapeHtml(x.nombre)}</strong>
-      <small>Ingresos: <b class="tag-in">${fmt.format(x.ingreso)}</b></small>
-      <small>Egresos: <b class="tag-out">${fmt.format(x.egreso)}</b></small>
-      <small>Saldo: <b>${fmt.format(x.ingreso-x.egreso)}</b></small>
+      <small>Ingresos: <b class="tag-in">${fmtGs(x.ingreso)}</b></small>
+      <small>Egresos: <b class="tag-out">${fmtGs(x.egreso)}</b></small>
+      <small>Saldo: <b>${fmtGs(x.ingreso-x.egreso)}</b></small>
       <small>Movimientos: ${x.movimientos}</small>
     </div>
   `).join("");
@@ -186,7 +187,7 @@ function exportJson(){
 }
 
 function exportCsv(){
-  const rows = [["Fecha","Nombre","Ingreso","Egreso","Saldo","Observación"]];
+  const rows = [["Fecha","Nombre","Ingreso (Gs.)","Egreso (Gs.)","Saldo (Gs.)","Observación"]];
   for(const m of movimientos){
     rows.push([m.fecha,m.nombre,m.ingreso||0,m.egreso||0,num(m.ingreso)-num(m.egreso),m.observacion||""]);
   }
