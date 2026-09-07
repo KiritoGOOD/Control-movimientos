@@ -111,8 +111,36 @@
     .modal{padding:18px}
     .modal h3{margin-top:0}
   </style>
+
+<style id="monthly-v4-style">
+.monthly-panel{margin:18px 0;padding:18px;border:1px solid #dbe3ea;border-radius:18px;background:#fff}
+.month-nav{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:14px}
+.month-nav button{border:0;border-radius:10px;padding:9px 13px;cursor:pointer;font-weight:700}
+#monthLabel{min-width:170px;text-align:center;font-weight:800;text-transform:capitalize}
+.month-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.month-card{padding:14px;border-radius:14px;background:#f4f7fb}
+.month-card small{display:block;margin-bottom:6px;color:#64748b}
+.month-card strong{font-size:1.15rem}
+.month-group-title{margin:22px 0 8px;font-size:1.05rem;text-transform:capitalize}
+@media(max-width:650px){.month-cards{grid-template-columns:1fr}.monthly-panel{padding:13px}}
+</style>
+
 </head>
 <body>
+
+<section class="monthly-panel" id="monthlyPanel">
+  <div class="month-nav">
+    <button type="button" id="prevMonth" aria-label="Mes anterior">‹</button>
+    <div id="monthLabel"></div>
+    <button type="button" id="nextMonth" aria-label="Mes siguiente">›</button>
+  </div>
+  <div class="month-cards">
+    <div class="month-card"><small>Cargas del mes</small><strong id="monthIncome">Gs. 0</strong></div>
+    <div class="month-card"><small>Retiros del mes</small><strong id="monthWithdrawal">Gs. 0</strong></div>
+    <div class="month-card"><small>Resultado mensual</small><strong id="monthResult">Gs. 0</strong></div>
+  </div>
+</section>
+
 <div class="app">
   <div class="topbar">
     <div class="brand">

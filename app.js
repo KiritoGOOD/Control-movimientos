@@ -271,3 +271,74 @@ document.addEventListener("DOMContentLoaded", ()=>{
     navigator.serviceWorker.register("sw.js").catch(()=>{});
   }
 });
+
+
+// ===== Resumen mensual V4 =====
+(() => {
+  let selectedMonth = new Date();
+  selectedMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
+
+  const $ = (id) => document.getElementById(id);
+  const money = (n) => `Gs. ${new Intl.NumberFormat("es-PY",{maximumFractionDigits:0}).format(Number(n||0))}`;
+  const monthName = (d) => new Intl.DateTimeFormat("es-PY",{month:"long",year:"numeric"}).format(d);
+
+  function parseDate(v){
+    if(!v) return null;
+    if(v instanceof Date) return v;
+    const s=String(v);
+    const iso=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+    if(iso) return new Date(+iso[1], +iso[2]-1, +iso[3]);
+    const lat=/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/.exec(s);
+    if(lat) return new Date(+lat[3], +lat[2]-1, +lat[1]);
+    const d=new Date(s); return isNaN(d)?null:d;
+  }
+
+  function records(){
+    try{
+      const raw=JSON.parse(localStorage.getItem("control_movimientos_v1")||"[]");
+      if(Array.isArray(raw)) return raw;
+      if(Array.isArray(raw.movimientos)) return raw.movimientos;
+      if(Array.isArray(raw.data)) return raw.data;
+      return [];
+    }catch(e){ return []; }
+  }
+
+  function val(o, keys){
+    for(const k of keys) if(o && o[k] !== undefined && o[k] !== null && o[k] !== "") return Number(o[k])||0;
+    return 0;
+  }
+
+  function monthlyData(){
+    return records().filter(r=>{
+      const d=parseDate(r.fecha || r.date || r.createdAt);
+      return d && d.getFullYear()===selectedMonth.getFullYear() && d.getMonth()===selectedMonth.getMonth();
+    });
+  }
+
+  function renderMonthly(){
+    if(!$("monthLabel")) return;
+    $("monthLabel").textContent=monthName(selectedMonth);
+    const rows=monthlyData();
+    const cargas=rows.reduce((s,r)=>s+val(r,["ingreso","carga","income"]),0);
+    const retiros=rows.reduce((s,r)=>s+val(r,["egreso","retiro","withdrawal"]),0);
+    $("monthIncome").textContent=money(cargas);
+    $("monthWithdrawal").textContent=money(retiros);
+    $("monthResult").textContent=money(cargas-retiros);
+
+    // Filtra visualmente las filas del historial al mes elegido si tienen fecha detectable.
+    document.querySelectorAll("tbody tr").forEach(tr=>{
+      const cells=[...tr.cells];
+      if(!cells.length) return;
+      const d=parseDate(cells[0]?.textContent?.trim());
+      if(d) tr.style.display=(d.getFullYear()===selectedMonth.getFullYear() && d.getMonth()===selectedMonth.getMonth())?"":"none";
+    });
+  }
+
+  $("prevMonth")?.addEventListener("click",()=>{selectedMonth=new Date(selectedMonth.getFullYear(),selectedMonth.getMonth()-1,1);renderMonthly();});
+  $("nextMonth")?.addEventListener("click",()=>{selectedMonth=new Date(selectedMonth.getFullYear(),selectedMonth.getMonth()+1,1);renderMonthly();});
+
+  document.addEventListener("click",()=>setTimeout(renderMonthly,50));
+  document.addEventListener("DOMContentLoaded",renderMonthly);
+  window.addEventListener("storage",renderMonthly);
+  setTimeout(renderMonthly,100);
+})();
