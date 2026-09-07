@@ -52,9 +52,10 @@ function num(v){
 }
 
 function formatearCampoGs(input){
-  const soloDigitos = String(input.value || "").replace(/\D/g,"");
-  if(!soloDigitos){ input.value = ""; return; }
-  input.value = new Intl.NumberFormat("es-PY", {maximumFractionDigits:0}).format(Number(soloDigitos));
+  let digitos = String(input.value || "").replace(/[^0-9]/g, "");
+  digitos = digitos.replace(/^0+(?=\d)/, "");
+  if(!digitos){ input.value = ""; return; }
+  input.value = digitos.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
 function activarFormatoGs(id){

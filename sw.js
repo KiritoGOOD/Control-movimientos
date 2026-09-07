@@ -1,8 +1,8 @@
-const CACHE = "control-movimientos-v6";
+const CACHE = "control-movimientos-v7";
 const ASSETS = [
   "./",
   "./index.html",
-  "./app.js",
+  "./app.js?v=7",
   "./manifest.webmanifest",
   "./icon-192.png",
   "./icon-512.png"
