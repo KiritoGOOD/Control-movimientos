@@ -59,6 +59,11 @@
     .btn-primary{background:var(--primary);color:#fff;flex:1}
     .btn-secondary{background:#edf3f7;color:var(--primary)}
     .btn-danger{background:#fde8e8;color:var(--danger)}
+
+    .month-selector{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px}
+    .month-selector button{padding:9px 12px;background:#edf3f7;color:var(--primary)}
+    .month-selector strong{min-width:150px;text-align:center;text-transform:capitalize;color:var(--primary)}
+
     .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
     @media(max-width:520px){.stats{grid-template-columns:1fr}}
     .stat{padding:14px;border-radius:14px;background:#f8fbfd;border:1px solid var(--line)}
@@ -112,41 +117,15 @@
     .modal h3{margin-top:0}
   </style>
 
-<style id="monthly-v4-style">
-.monthly-panel{margin:18px 0;padding:18px;border:1px solid #dbe3ea;border-radius:18px;background:#fff}
-.month-nav{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:14px}
-.month-nav button{border:0;border-radius:10px;padding:9px 13px;cursor:pointer;font-weight:700}
-#monthLabel{min-width:170px;text-align:center;font-weight:800;text-transform:capitalize}
-.month-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.month-card{padding:14px;border-radius:14px;background:#f4f7fb}
-.month-card small{display:block;margin-bottom:6px;color:#64748b}
-.month-card strong{font-size:1.15rem}
-.month-group-title{margin:22px 0 8px;font-size:1.05rem;text-transform:capitalize}
-@media(max-width:650px){.month-cards{grid-template-columns:1fr}.monthly-panel{padding:13px}}
-</style>
-
 </head>
 <body>
-
-<section class="monthly-panel" id="monthlyPanel">
-  <div class="month-nav">
-    <button type="button" id="prevMonth" aria-label="Mes anterior">‹</button>
-    <div id="monthLabel"></div>
-    <button type="button" id="nextMonth" aria-label="Mes siguiente">›</button>
-  </div>
-  <div class="month-cards">
-    <div class="month-card"><small>Cargas del mes</small><strong id="monthIncome">Gs. 0</strong></div>
-    <div class="month-card"><small>Retiros del mes</small><strong id="monthWithdrawal">Gs. 0</strong></div>
-    <div class="month-card"><small>Resultado mensual</small><strong id="monthResult">Gs. 0</strong></div>
-  </div>
-</section>
 
 <div class="app">
   <div class="topbar">
     <div class="brand">
       <div>
         <h1>Control de Movimientos</h1>
-        <small>Ingresos, egresos y saldos · guardado local</small>
+        <small>Cargas, retiros y resultado · guardado local</small>
       </div>
       <div class="pill">Gs.</div>
     </div>
@@ -165,7 +144,7 @@
           <input id="nombre" placeholder="Ej.: Ezequiel Palacios" autocomplete="off">
         </div>
         <div>
-          <label for="ingreso">Ingreso (Gs.)</label>
+          <label for="ingreso">Carga (Gs.)</label>
           <input id="ingreso" type="number" inputmode="decimal" min="0" step="1" placeholder="0">
         </div>
         <div>
@@ -184,11 +163,16 @@
     </section>
 
     <section class="card">
-      <h2>Resumen general</h2>
+      <h2>Resumen mensual</h2>
+      <div class="month-selector">
+        <button type="button" id="prevMonth" aria-label="Mes anterior">‹</button>
+        <strong id="monthLabel">Mes actual</strong>
+        <button type="button" id="nextMonth" aria-label="Mes siguiente">›</button>
+      </div>
       <div class="stats">
-        <div class="stat"><div class="k">Ingresos (Gs.)</div><div class="v in" id="totalIngresos">0</div></div>
-        <div class="stat"><div class="k">Retiros (Gs.)</div><div class="v out" id="totalEgresos">0</div></div>
-        <div class="stat"><div class="k">Saldo (Gs.)</div><div class="v balance" id="saldoGeneral">0</div></div>
+        <div class="stat"><div class="k">Cargas del mes</div><div class="v in" id="totalIngresos">0</div></div>
+        <div class="stat"><div class="k">Retiros del mes</div><div class="v out" id="totalEgresos">0</div></div>
+        <div class="stat"><div class="k">Resultado mensual</div><div class="v balance" id="saldoGeneral">0</div></div>
       </div>
       <div class="footer-note" id="contador">0 movimientos</div>
     </section>
@@ -205,7 +189,7 @@
       <input id="buscar" placeholder="Buscar por nombre u observación">
       <select id="filtroTipo">
         <option value="todos">Todos</option>
-        <option value="ingreso">Solo ingresos</option>
+        <option value="ingreso">Solo cargas</option>
         <option value="egreso">Solo retiros</option>
       </select>
     </div>
@@ -213,7 +197,7 @@
       <table>
         <thead>
           <tr>
-            <th>Fecha</th><th>Nombre</th><th>Ingreso (Gs.)</th><th>Retiro (Gs.)</th><th>Saldo (Gs.)</th><th>Observación</th><th>Acciones</th>
+            <th>Fecha</th><th>Nombre</th><th>Carga (Gs.)</th><th>Retiro (Gs.)</th><th>Resultado mensual</th><th>Observación</th><th>Acciones</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -258,8 +242,8 @@
     <div class="form-grid">
       <div><label>Fecha</label><input id="eFecha" type="date"></div>
       <div><label>Nombre</label><input id="eNombre"></div>
-      <div><label>Ingreso</label><input id="eIngreso" type="number" min="0"></div>
-      <div><label>Egreso</label><input id="eEgreso" type="number" min="0"></div>
+      <div><label>Carga</label><input id="eIngreso" type="number" min="0"></div>
+      <div><label>Retiro</label><input id="eEgreso" type="number" min="0"></div>
       <div style="grid-column:1/-1"><label>Observación</label><textarea id="eObs"></textarea></div>
     </div>
     <div class="actions">

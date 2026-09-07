@@ -3,6 +3,24 @@ let movimientos = cargar();
 let editId = null;
 let deferredPrompt = null;
 
+let mesSeleccionado = new Date();
+mesSeleccionado = new Date(mesSeleccionado.getFullYear(), mesSeleccionado.getMonth(), 1);
+
+function esDelMes(fecha, mes=mesSeleccionado){
+  if(!fecha) return false;
+  const p = String(fecha).slice(0,10).split("-");
+  if(p.length !== 3) return false;
+  return Number(p[0]) === mes.getFullYear() && Number(p[1]) === mes.getMonth()+1;
+}
+
+function nombreMes(d){
+  return new Intl.DateTimeFormat("es-PY",{month:"long",year:"numeric"}).format(d);
+}
+
+function movimientosDelMes(){
+  return movimientos.filter(m => esDelMes(m.fecha));
+}
+
 const $ = (id) => document.getElementById(id);
 const numFmt = new Intl.NumberFormat("es-PY", { maximumFractionDigits: 0 });
 const fmtGs = (n) => `Gs. ${numFmt.format(Number(n || 0))}`;
@@ -41,7 +59,7 @@ function agregarMovimiento(){
   const ingreso = num($("ingreso").value);
   const egreso = num($("egreso").value);
   if(!nombre){ alert("Ingrese un nombre."); $("nombre").focus(); return; }
-  if(ingreso <= 0 && egreso <= 0){ alert("Ingrese un importe en Ingreso o Retiro."); return; }
+  if(ingreso <= 0 && egreso <= 0){ alert("Ingrese un importe en Carga o Retiro."); return; }
 
   movimientos.push({
     id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+Math.random()),
@@ -87,7 +105,7 @@ function guardarEdicion(){
   const ingreso = num($("eIngreso").value);
   const egreso = num($("eEgreso").value);
   if(!nombre){ alert("Ingrese un nombre."); return; }
-  if(ingreso <= 0 && egreso <= 0){ alert("Ingrese un importe en Ingreso o Retiro."); return; }
+  if(ingreso <= 0 && egreso <= 0){ alert("Ingrese un importe en Carga o Retiro."); return; }
   m.fecha = $("eFecha").value || hoyISO();
   m.nombre = nombre;
   m.ingreso = ingreso;
@@ -98,18 +116,20 @@ function guardarEdicion(){
 }
 
 function resumenGeneral(){
-  const ing = movimientos.reduce((a,m)=>a+num(m.ingreso),0);
-  const egr = movimientos.reduce((a,m)=>a+num(m.egreso),0);
+  const delMes = movimientosDelMes();
+  const ing = delMes.reduce((a,m)=>a+num(m.ingreso),0);
+  const egr = delMes.reduce((a,m)=>a+num(m.egreso),0);
+  $("monthLabel").textContent = nombreMes(mesSeleccionado);
   $("totalIngresos").textContent = fmtGs(ing);
   $("totalEgresos").textContent = fmtGs(egr);
   $("saldoGeneral").textContent = fmtGs(ing-egr);
-  $("contador").textContent = `${movimientos.length} movimiento${movimientos.length===1?"":"s"}`;
+  $("contador").textContent = `${delMes.length} movimiento${delMes.length===1?"":"s"} en este mes`;
 }
 
 function renderHistorial(){
   const q = $("buscar").value.toLowerCase().trim();
   const tipo = $("filtroTipo").value;
-  let arr = [...movimientos].sort((a,b) => (b.fecha||"").localeCompare(a.fecha||"") || (b.creado||0)-(a.creado||0));
+  let arr = movimientosDelMes().sort((a,b) => (b.fecha||"").localeCompare(a.fecha||"") || (b.creado||0)-(a.creado||0));
 
   arr = arr.filter(m => {
     const texto = `${m.nombre} ${m.observacion||""}`.toLowerCase();
@@ -140,7 +160,7 @@ function renderHistorial(){
 
 function renderPersonas(){
   const map = new Map();
-  for(const m of movimientos){
+  for(const m of movimientosDelMes()){
     const key = m.nombre.trim().toLocaleLowerCase("es");
     if(!map.has(key)) map.set(key,{nombre:m.nombre, ingreso:0, egreso:0, movimientos:0});
     const x = map.get(key);
@@ -154,8 +174,8 @@ function renderPersonas(){
   $("resumenPersonas").innerHTML = arr.map(x=>`
     <div class="person">
       <strong>${escapeHtml(x.nombre)}</strong>
-      <small>Ingresos: <b class="tag-in">${fmtGs(x.ingreso)}</b></small>
-      <small>Egresos: <b class="tag-out">${fmtGs(x.egreso)}</b></small>
+      <small>Cargas: <b class="tag-in">${fmtGs(x.ingreso)}</b></small>
+      <small>Retiros: <b class="tag-out">${fmtGs(x.egreso)}</b></small>
       <small>Saldo: <b>${fmtGs(x.ingreso-x.egreso)}</b></small>
       <small>Movimientos: ${x.movimientos}</small>
     </div>
@@ -187,7 +207,7 @@ function exportJson(){
 }
 
 function exportCsv(){
-  const rows = [["Fecha","Nombre","Ingreso (Gs.)","Retiro (Gs.)","Saldo (Gs.)","Observación"]];
+  const rows = [["Fecha","Nombre","Carga (Gs.)","Retiro (Gs.)","Resultado (Gs.)","Observación"]];
   for(const m of movimientos){
     rows.push([m.fecha,m.nombre,m.ingreso||0,m.egreso||0,num(m.ingreso)-num(m.egreso),m.observacion||""]);
   }
@@ -216,6 +236,15 @@ function importarArchivo(file){
 document.addEventListener("DOMContentLoaded", ()=>{
   $("fecha").value = hoyISO();
   render();
+
+  $("prevMonth").addEventListener("click", ()=>{
+    mesSeleccionado = new Date(mesSeleccionado.getFullYear(), mesSeleccionado.getMonth()-1, 1);
+    render();
+  });
+  $("nextMonth").addEventListener("click", ()=>{
+    mesSeleccionado = new Date(mesSeleccionado.getFullYear(), mesSeleccionado.getMonth()+1, 1);
+    render();
+  });
 
   $("agregar").addEventListener("click", agregarMovimiento);
   $("limpiar").addEventListener("click", ()=>{
@@ -273,72 +302,3 @@ document.addEventListener("DOMContentLoaded", ()=>{
 });
 
 
-// ===== Resumen mensual V4 =====
-(() => {
-  let selectedMonth = new Date();
-  selectedMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
-
-  const $ = (id) => document.getElementById(id);
-  const money = (n) => `Gs. ${new Intl.NumberFormat("es-PY",{maximumFractionDigits:0}).format(Number(n||0))}`;
-  const monthName = (d) => new Intl.DateTimeFormat("es-PY",{month:"long",year:"numeric"}).format(d);
-
-  function parseDate(v){
-    if(!v) return null;
-    if(v instanceof Date) return v;
-    const s=String(v);
-    const iso=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);
-    if(iso) return new Date(+iso[1], +iso[2]-1, +iso[3]);
-    const lat=/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/.exec(s);
-    if(lat) return new Date(+lat[3], +lat[2]-1, +lat[1]);
-    const d=new Date(s); return isNaN(d)?null:d;
-  }
-
-  function records(){
-    try{
-      const raw=JSON.parse(localStorage.getItem("control_movimientos_v1")||"[]");
-      if(Array.isArray(raw)) return raw;
-      if(Array.isArray(raw.movimientos)) return raw.movimientos;
-      if(Array.isArray(raw.data)) return raw.data;
-      return [];
-    }catch(e){ return []; }
-  }
-
-  function val(o, keys){
-    for(const k of keys) if(o && o[k] !== undefined && o[k] !== null && o[k] !== "") return Number(o[k])||0;
-    return 0;
-  }
-
-  function monthlyData(){
-    return records().filter(r=>{
-      const d=parseDate(r.fecha || r.date || r.createdAt);
-      return d && d.getFullYear()===selectedMonth.getFullYear() && d.getMonth()===selectedMonth.getMonth();
-    });
-  }
-
-  function renderMonthly(){
-    if(!$("monthLabel")) return;
-    $("monthLabel").textContent=monthName(selectedMonth);
-    const rows=monthlyData();
-    const cargas=rows.reduce((s,r)=>s+val(r,["ingreso","carga","income"]),0);
-    const retiros=rows.reduce((s,r)=>s+val(r,["egreso","retiro","withdrawal"]),0);
-    $("monthIncome").textContent=money(cargas);
-    $("monthWithdrawal").textContent=money(retiros);
-    $("monthResult").textContent=money(cargas-retiros);
-
-    // Filtra visualmente las filas del historial al mes elegido si tienen fecha detectable.
-    document.querySelectorAll("tbody tr").forEach(tr=>{
-      const cells=[...tr.cells];
-      if(!cells.length) return;
-      const d=parseDate(cells[0]?.textContent?.trim());
-      if(d) tr.style.display=(d.getFullYear()===selectedMonth.getFullYear() && d.getMonth()===selectedMonth.getMonth())?"":"none";
-    });
-  }
-
-  $("prevMonth")?.addEventListener("click",()=>{selectedMonth=new Date(selectedMonth.getFullYear(),selectedMonth.getMonth()-1,1);renderMonthly();});
-  $("nextMonth")?.addEventListener("click",()=>{selectedMonth=new Date(selectedMonth.getFullYear(),selectedMonth.getMonth()+1,1);renderMonthly();});
-
-  document.addEventListener("click",()=>setTimeout(renderMonthly,50));
-  document.addEventListener("DOMContentLoaded",renderMonthly);
-  window.addEventListener("storage",renderMonthly);
-  setTimeout(renderMonthly,100);
-})();
