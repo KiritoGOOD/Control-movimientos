@@ -41,7 +41,7 @@ function agregarMovimiento(){
   const ingreso = num($("ingreso").value);
   const egreso = num($("egreso").value);
   if(!nombre){ alert("Ingrese un nombre."); $("nombre").focus(); return; }
-  if(ingreso <= 0 && egreso <= 0){ alert("Ingrese un importe en Ingreso o Egreso."); return; }
+  if(ingreso <= 0 && egreso <= 0){ alert("Ingrese un importe en Ingreso o Retiro."); return; }
 
   movimientos.push({
     id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())+Math.random()),
@@ -87,7 +87,7 @@ function guardarEdicion(){
   const ingreso = num($("eIngreso").value);
   const egreso = num($("eEgreso").value);
   if(!nombre){ alert("Ingrese un nombre."); return; }
-  if(ingreso <= 0 && egreso <= 0){ alert("Ingrese un importe en Ingreso o Egreso."); return; }
+  if(ingreso <= 0 && egreso <= 0){ alert("Ingrese un importe en Ingreso o Retiro."); return; }
   m.fecha = $("eFecha").value || hoyISO();
   m.nombre = nombre;
   m.ingreso = ingreso;
@@ -187,7 +187,7 @@ function exportJson(){
 }
 
 function exportCsv(){
-  const rows = [["Fecha","Nombre","Ingreso (Gs.)","Egreso (Gs.)","Saldo (Gs.)","Observación"]];
+  const rows = [["Fecha","Nombre","Ingreso (Gs.)","Retiro (Gs.)","Saldo (Gs.)","Observación"]];
   for(const m of movimientos){
     rows.push([m.fecha,m.nombre,m.ingreso||0,m.egreso||0,num(m.ingreso)-num(m.egreso),m.observacion||""]);
   }
