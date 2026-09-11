@@ -104,8 +104,15 @@ function agregarMovimiento(){
     id:nuevoId(), fecha:$("fecha").value||hoyISO(), nombre, ingreso, egreso,
     observacion:$("obs").value.trim(), creado:Date.now(), updated_at:ahoraISO(), deleted:false
   }, true));
-  guardarLocal();
+
+  // V8.3: respuesta visual inmediata. El movimiento aparece antes de cualquier llamada a la nube.
+  guardarLocal(true);
+  render();
+  actualizarEstadoSync();
+
   $("nombre").value=""; $("ingreso").value=""; $("egreso").value=""; $("obs").value=""; $("fecha").value=hoyISO(); $("nombre").focus();
+
+  // La sincronización ocurre en segundo plano sin bloquear la interfaz.
   programarSync();
 }
 function eliminar(id){
@@ -296,7 +303,7 @@ async function sincronizarTodo(){
     actualizarEstadoSync();
   }
 }
-function programarSync(){ clearTimeout(syncTimer); syncTimer=setTimeout(()=>sincronizarTodo(),500); }
+function programarSync(){ clearTimeout(syncTimer); syncTimer=setTimeout(()=>sincronizarTodo(),50); }
 
 async function iniciarSesionGuardada(){
   sb=crearCliente();
@@ -328,6 +335,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   window.addEventListener("online",()=>{actualizarEstadoSync();sincronizarTodo();}); window.addEventListener("offline",actualizarEstadoSync);
   window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;$("installBanner").style.display="block";});
   $("installBtn").addEventListener("click",async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBanner").style.display="none";});
-  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=8.2",{updateViaCache:"none"}).catch(()=>{});
+  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=8.3",{updateViaCache:"none"}).catch(()=>{});
   iniciarSesionGuardada();
 });
