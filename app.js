@@ -911,7 +911,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   $("saveNewPasswordBtn").addEventListener("click",guardarNuevaPassword);
   $("newPasswordConfirm").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();guardarNuevaPassword();}});
   $("profileBtn").addEventListener("click",abrirPerfil);
-  $("themeToggle").addEventListener("click",alternarTema);
+  if($("themeToggle")) $("themeToggle").addEventListener("click",alternarTema);
   cargarTema();
   $("saveProfileBtn").addEventListener("click",guardarPerfil);
   $("cancelProfileBtn").addEventListener("click",()=>$("profileDialog").close());
@@ -941,6 +941,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&currentUser?.id) validarCuentaActual({silencioso:true});});
   window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;$("installBanner").style.display="block";});
   $("installBtn").addEventListener("click",async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBanner").style.display="none";});
-  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=11.1",{updateViaCache:"none"}).catch(()=>{});
+  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=11.1.1",{updateViaCache:"none"}).catch(()=>{});
   iniciarSesionGuardada();
 });

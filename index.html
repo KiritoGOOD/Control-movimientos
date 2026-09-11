@@ -349,6 +349,12 @@ html.dark-preload body{background:#0f141a;color:#edf3f8}
       <div class="account-box">
         <span id="syncStatus" class="sync-pill">Preparando…</span>
         <span class="account-identity"><span id="accountName" class="account-name"></span><span id="accountEmail" class="account-email"></span></span>
+
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Cambiar tema">
+          <span class="theme-icon" id="themeIcon">☾</span>
+          <span id="themeLabel">Modo oscuro</span>
+        </button>
+
         <button id="profileBtn" class="btn-secondary btn-small" type="button">Mi perfil</button>
         <button id="syncNow" class="btn-secondary btn-small" type="button">Sincronizar</button>
         <button id="logoutBtn" class="btn-secondary btn-small" type="button">Salir</button>
@@ -619,7 +625,7 @@ html.dark-preload body{background:#0f141a;color:#edf3f8}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-<script src="supabase-config.js?v=11.1"></script>
-<script src="app.js?v=11.1"></script>
+<script src="supabase-config.js?v=11.1.1"></script>
+<script src="app.js?v=11.1.1"></script>
 </body>
 </html>
