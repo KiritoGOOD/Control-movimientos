@@ -173,7 +173,13 @@ async function register(){
   if(!sb){ setAuthMsg("Primero configurá Supabase en supabase-config.js."); return; }
   if(!navigator.onLine){ setAuthMsg("Necesitás internet para crear una cuenta."); return; }
   const email=$("registerEmail").value.trim(),password=$("registerPassword").value; if(!email||password.length<6){setAuthMsg("Usá un email válido y una contraseña de al menos 6 caracteres.");return;}
-  setAuthMsg("Creando cuenta…"); const {data,error}=await sb.auth.signUp({email,password}); if(error){setAuthMsg(error.message);return;}
+  setAuthMsg("Creando cuenta…"); const {data,error}=await sb.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: "https://kiritogood.github.io/Control-movimientos/"
+    }
+  }); if(error){setAuthMsg(error.message);return;}
   if(data.session && data.user){ await iniciarUsuario(data.user,true); } else { setAuthMsg("Cuenta creada. Revisá tu email y confirmá la cuenta antes de iniciar sesión."); cambiarAuthTab("login"); setAuthMsg("Cuenta creada. Revisá tu email y confirmá la cuenta antes de iniciar sesión."); }
 }
 async function logout(){
@@ -265,6 +271,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   window.addEventListener("online",()=>{actualizarEstadoSync();sincronizarTodo();}); window.addEventListener("offline",actualizarEstadoSync);
   window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;$("installBanner").style.display="block";});
   $("installBtn").addEventListener("click",async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBanner").style.display="none";});
-  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=8",{updateViaCache:"none"}).catch(()=>{});
+  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=8.1",{updateViaCache:"none"}).catch(()=>{});
   iniciarSesionGuardada();
 });
