@@ -166,28 +166,75 @@ function importarArchivo(file){
 
 function setAuthMsg(msg,show=true){ $("authMsg").textContent=msg; $("authMsg").style.display=show?"block":"none"; }
 function mostrarAuth(){ $("authScreen").hidden=false; $("mainApp").hidden=true; }
-function mostrarApp(){ $("authScreen").hidden=true; $("mainApp").hidden=false; $("accountEmail").textContent=currentUser?.email||"Modo offline"; }
+function mostrarApp(){
+  $("authScreen").hidden=true;
+  $("mainApp").hidden=false;
+  const nombreCompleto=[currentUser?.nombre,currentUser?.apellido].filter(Boolean).join(" ").trim();
+  $("accountName").textContent=nombreCompleto || "Usuario";
+  $("accountEmail").textContent=currentUser?.email || "Modo offline";
+}
 function cambiarAuthTab(tab){
   const login=tab==="login"; $("tabLogin").classList.toggle("active",login); $("tabRegister").classList.toggle("active",!login); $("panelLogin").classList.toggle("active",login); $("panelRegister").classList.toggle("active",!login); setAuthMsg("",false);
 }
 async function login(){
   if(!sb){ setAuthMsg("Primero configurá Supabase en supabase-config.js."); return; }
   if(!navigator.onLine){ setAuthMsg("Para iniciar sesión por primera vez necesitás internet."); return; }
-  const email=$("loginEmail").value.trim(),password=$("loginPassword").value; if(!email||!password){setAuthMsg("Completá email y contraseña.");return;}
-  setAuthMsg("Ingresando…"); const {data,error}=await sb.auth.signInWithPassword({email,password}); if(error){setAuthMsg(error.message);return;} await iniciarUsuario(data.user,true);
+  const email=$("loginEmail").value.trim();
+  const password=$("loginPassword").value;
+  if(!email||!password){setAuthMsg("Completá email y contraseña.");return;}
+  setAuthMsg("Ingresando…");
+  const {data,error}=await sb.auth.signInWithPassword({email,password});
+  if(error){setAuthMsg(error.message);return;}
+  await iniciarUsuario(data.user,true);
 }
 async function register(){
   if(!sb){ setAuthMsg("Primero configurá Supabase en supabase-config.js."); return; }
   if(!navigator.onLine){ setAuthMsg("Necesitás internet para crear una cuenta."); return; }
-  const email=$("registerEmail").value.trim(),password=$("registerPassword").value; if(!email||password.length<6){setAuthMsg("Usá un email válido y una contraseña de al menos 6 caracteres.");return;}
+  const nombre=normalizarNombre($("registerNombre").value);
+  const apellido=normalizarNombre($("registerApellido").value);
+  const email=$("registerEmail").value.trim(),password=$("registerPassword").value;
+  const confirmPassword=$("registerPasswordConfirm").value;
+  if(!nombre||!apellido){setAuthMsg("Completá tu nombre y apellido.");return;}
+  if(!email||password.length<6){setAuthMsg("Usá un email válido y una contraseña de al menos 6 caracteres.");return;}
+  if(!confirmPassword){setAuthMsg("Confirmá tu contraseña.");return;}
+  if(password!==confirmPassword){setAuthMsg("Las contraseñas no coinciden.");return;}
   setAuthMsg("Creando cuenta…"); const {data,error}=await sb.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: "https://kiritogood.github.io/Control-movimientos/"
+      emailRedirectTo: "https://kiritogood.github.io/Control-movimientos/",
+      data: { nombre, apellido }
     }
   }); if(error){setAuthMsg(error.message);return;}
   if(data.session && data.user){ await iniciarUsuario(data.user,true); } else { setAuthMsg("Cuenta creada. Revisá tu email y confirmá la cuenta antes de iniciar sesión."); cambiarAuthTab("login"); setAuthMsg("Cuenta creada. Revisá tu email y confirmá la cuenta antes de iniciar sesión."); }
+}
+async function abrirPerfil(){
+  if(!currentUser) return;
+  $("profileNombre").value=currentUser.nombre||"";
+  $("profileApellido").value=currentUser.apellido||"";
+  $("profileEmail").value=currentUser.email||"";
+  $("profileMsg").textContent="";
+  $("profileDialog").showModal();
+}
+async function guardarPerfil(){
+  if(!sb||!currentUser) return;
+  if(!navigator.onLine){ $("profileMsg").textContent="Necesitás internet para actualizar tu perfil."; return; }
+  const nombre=normalizarNombre($("profileNombre").value);
+  const apellido=normalizarNombre($("profileApellido").value);
+  if(!nombre||!apellido){ $("profileMsg").textContent="Completá tu nombre y apellido."; return; }
+  $("profileMsg").textContent="Guardando…";
+  const {data,error}=await sb.auth.updateUser({data:{nombre,apellido}});
+  if(error){ $("profileMsg").textContent=error.message; return; }
+  const user=data.user;
+  currentUser={
+    id:user.id,
+    email:user.email||currentUser.email||"",
+    nombre:user.user_metadata?.nombre||nombre,
+    apellido:user.user_metadata?.apellido||apellido
+  };
+  localStorage.setItem(LAST_USER_KEY,JSON.stringify(currentUser));
+  mostrarApp();
+  $("profileDialog").close();
 }
 async function logout(){
   if(!confirm("¿Cerrar sesión en este dispositivo?")) return;
@@ -196,7 +243,13 @@ async function logout(){
 }
 
 async function iniciarUsuario(user, sincronizar=true){
-  currentUser={id:user.id,email:user.email||""}; localStorage.setItem(LAST_USER_KEY,JSON.stringify(currentUser)); cargarLocal(); await migrarV7SiCorresponde(); mostrarApp(); render(); if(sincronizar) await sincronizarTodo();
+  currentUser={
+    id:user.id,
+    email:user.email||"",
+    nombre:user.user_metadata?.nombre||"",
+    apellido:user.user_metadata?.apellido||""
+  };
+  localStorage.setItem(LAST_USER_KEY,JSON.stringify(currentUser)); cargarLocal(); await migrarV7SiCorresponde(); mostrarApp(); render(); if(sincronizar) await sincronizarTodo();
 }
 async function migrarV7SiCorresponde(){
   try{
@@ -241,7 +294,12 @@ async function sincronizarTodo(){
     }
 
     const cloudUser=userData.user;
-    currentUser={id:cloudUser.id,email:cloudUser.email||currentUser.email||""};
+    currentUser={
+      id:cloudUser.id,
+      email:cloudUser.email||currentUser.email||"",
+      nombre:cloudUser.user_metadata?.nombre||currentUser.nombre||"",
+      apellido:cloudUser.user_metadata?.apellido||currentUser.apellido||""
+    };
     localStorage.setItem(LAST_USER_KEY,JSON.stringify(currentUser));
 
     // 1) Descargar primero todo lo que ya existe en la nube para esta cuenta.
@@ -321,7 +379,11 @@ async function iniciarSesionGuardada(){
 document.addEventListener("DOMContentLoaded",()=>{
   $("fecha").value=hoyISO(); ["ingreso","egreso","eIngreso","eEgreso"].forEach(activarFormatoGs);
   $("tabLogin").addEventListener("click",()=>cambiarAuthTab("login")); $("tabRegister").addEventListener("click",()=>cambiarAuthTab("register"));
-  $("loginBtn").addEventListener("click",login); $("registerBtn").addEventListener("click",register); $("logoutBtn").addEventListener("click",logout); $("syncNow").addEventListener("click",sincronizarTodo);
+  $("profileBtn").addEventListener("click",abrirPerfil);
+  $("saveProfileBtn").addEventListener("click",guardarPerfil);
+  $("cancelProfileBtn").addEventListener("click",()=>$("profileDialog").close());
+  $("profileApellido").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();guardarPerfil();}});
+  $("loginBtn").addEventListener("click",login); $("registerPasswordConfirm").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();register();}}); $("registerBtn").addEventListener("click",register); $("logoutBtn").addEventListener("click",logout); $("syncNow").addEventListener("click",sincronizarTodo);
   $("loginPassword").addEventListener("keydown",e=>{if(e.key==="Enter")login();}); $("registerPassword").addEventListener("keydown",e=>{if(e.key==="Enter")register();});
   $("prevMonth").addEventListener("click",()=>{mesSeleccionado=new Date(mesSeleccionado.getFullYear(),mesSeleccionado.getMonth()-1,1);render();});
   $("nextMonth").addEventListener("click",()=>{mesSeleccionado=new Date(mesSeleccionado.getFullYear(),mesSeleccionado.getMonth()+1,1);render();});
@@ -335,6 +397,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   window.addEventListener("online",()=>{actualizarEstadoSync();sincronizarTodo();}); window.addEventListener("offline",actualizarEstadoSync);
   window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;$("installBanner").style.display="block";});
   $("installBtn").addEventListener("click",async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBanner").style.display="none";});
-  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=8.3",{updateViaCache:"none"}).catch(()=>{});
+  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=8.8",{updateViaCache:"none"}).catch(()=>{});
   iniciarSesionGuardada();
 });

@@ -132,7 +132,10 @@
     .sync-pill.offline{background:#fff3cd;color:#8a5a00}.sync-pill.pending{background:#fff1e6;color:#9a4d00}.sync-pill.ok{background:#e9f7ef;color:#15703d}.sync-pill.error{background:#fde8e8;color:#a71919}
     .btn-small{padding:8px 10px;font-size:12px}
     #mainApp[hidden],#authScreen[hidden]{display:none!important}
-  </style>
+  .account-identity{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
+.account-name{font-weight:700}
+.account-email{font-size:12px;opacity:.72;font-weight:400}
+</style>
 
 </head>
 <body>
@@ -151,8 +154,11 @@
       <button class="btn-primary" id="loginBtn" style="width:100%">ENTRAR</button>
     </div>
     <div id="panelRegister" class="auth-panel">
+      <div class="field"><label for="registerNombre">Nombre</label><input id="registerNombre" type="text" autocomplete="given-name" placeholder="Tu nombre"></div>
+      <div class="field"><label for="registerApellido">Apellido</label><input id="registerApellido" type="text" autocomplete="family-name" placeholder="Tu apellido"></div>
       <div class="field"><label for="registerEmail">Email</label><input id="registerEmail" type="email" autocomplete="email" placeholder="correo@ejemplo.com"></div>
       <div class="field"><label for="registerPassword">Contraseña</label><input id="registerPassword" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres"></div>
+      <div class="field"><label for="registerPasswordConfirm">Confirmar contraseña</label><input id="registerPasswordConfirm" type="password" autocomplete="new-password" placeholder="Repetí tu contraseña"></div>
       <button class="btn-primary" id="registerBtn" style="width:100%">CREAR CUENTA</button>
     </div>
     <div id="authMsg" class="auth-msg"></div>
@@ -171,7 +177,8 @@
       </div>
       <div class="account-box">
         <span id="syncStatus" class="sync-pill">Preparando…</span>
-        <span id="accountEmail" class="account-email"></span>
+        <span class="account-identity"><span id="accountName" class="account-name"></span><span id="accountEmail" class="account-email"></span></span>
+        <button id="profileBtn" class="btn-secondary btn-small" type="button">Mi perfil</button>
         <button id="syncNow" class="btn-secondary btn-small" type="button">Sincronizar</button>
         <button id="logoutBtn" class="btn-secondary btn-small" type="button">Salir</button>
       </div>
@@ -302,8 +309,25 @@
   </div>
 </dialog>
 
+
+<dialog id="profileDialog">
+  <div class="modal">
+    <h3>Mi perfil</h3>
+    <div class="form-grid">
+      <div><label for="profileNombre">Nombre</label><input id="profileNombre" type="text" autocomplete="given-name"></div>
+      <div><label for="profileApellido">Apellido</label><input id="profileApellido" type="text" autocomplete="family-name"></div>
+      <div style="grid-column:1/-1"><label>Email</label><input id="profileEmail" type="email" disabled></div>
+    </div>
+    <div class="actions">
+      <button class="btn-primary" id="saveProfileBtn" type="button">Guardar</button>
+      <button class="btn-secondary" id="cancelProfileBtn" type="button">Cancelar</button>
+    </div>
+    <div id="profileMsg" class="auth-msg"></div>
+  </div>
+</dialog>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=8.3"></script>
-<script src="app.js?v=8.3"></script>
+<script src="supabase-config.js?v=8.8"></script>
+<script src="app.js?v=8.8"></script>
 </body>
 </html>
