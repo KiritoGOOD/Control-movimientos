@@ -1,9 +1,9 @@
-const CACHE = "control-movimientos-v9";
+const CACHE = "control-movimientos-v10";
 const ASSETS = [
   "./",
   "./index.html",
-  "./app.js?v=9",
-  "./supabase-config.js?v=9",
+  "./app.js?v=10",
+  "./supabase-config.js?v=10",
   "./manifest.webmanifest",
   "./icon-192.png",
   "./icon-512.png"

@@ -241,8 +241,13 @@ async function login(){
   if(!email||!password){setAuthMsg("Completá email y contraseña.");return;}
   setAuthMsg("Ingresando…");
   const {data,error}=await sb.auth.signInWithPassword({email,password});
-  if(error){setAuthMsg(error.message);return;}
+  if(error){
+    if(errorEsBan(error)){ setAuthMsg("Esta cuenta fue bloqueada por el administrador."); return; }
+    setAuthMsg(error.message); return;
+  }
+  marcarValidacionCorrecta(data.user.id);
   await iniciarUsuario(data.user,true);
+  iniciarControlDeAcceso();
 }
 async function register(){
   if(!sb){ setAuthMsg("Primero configurá Supabase en supabase-config.js."); return; }
@@ -294,6 +299,7 @@ async function guardarPerfil(){
   $("profileDialog").close();
 }
 async function logout(){
+  clearInterval(authCheckTimer);
   if(!confirm("¿Cerrar sesión en este dispositivo?")) return;
   if(sb && navigator.onLine){ try{await sb.auth.signOut();}catch{} }
   localStorage.removeItem(LAST_USER_KEY); currentUser=null; movimientos=[]; mostrarAuth(); setAuthMsg("Sesión cerrada.");
@@ -335,6 +341,10 @@ function dbRow(m){ return {id:m.id,user_id:currentUser.id,fecha:m.fecha,nombre:m
 function fromDb(r){ return normalizarMovimiento({...r,sync_status:"synced"},false); }
 
 async function sincronizarTodo(){
+  if(currentUser?.id && navigator.onLine){
+    const acceso=await validarCuentaActual({silencioso:true});
+    if(!acceso) return;
+  }
   if(syncBusy||!currentUser||!sb||!navigator.onLine){ actualizarEstadoSync(); return; }
 
   syncBusy=true;
@@ -411,7 +421,7 @@ async function sincronizarTodo(){
     render();
 
   }catch(err){
-    console.error("V9 sync:",err);
+    console.error("V10 sync:",err);
     actualizarEstadoSync("Error de sincronización","error");
   }finally{
     syncBusy=false;
@@ -420,9 +430,115 @@ async function sincronizarTodo(){
 }
 function programarSync(){ clearTimeout(syncTimer); syncTimer=setTimeout(()=>sincronizarTodo(),50); }
 
+
+function authValidationKey(userId){ return `${AUTH_VALIDATION_PREFIX}${userId}`; }
+function blockedUserKey(userId){ return `${BLOCKED_USER_PREFIX}${userId}`; }
+
+function estaMarcadoBloqueado(userId){
+  return !!(userId && localStorage.getItem(blockedUserKey(userId))==="1");
+}
+function marcarValidacionCorrecta(userId){
+  if(!userId) return;
+  localStorage.setItem(authValidationKey(userId),String(Date.now()));
+  localStorage.removeItem(blockedUserKey(userId));
+}
+function validacionOfflineVigente(userId){
+  if(!userId || estaMarcadoBloqueado(userId)) return false;
+  const t=Number(localStorage.getItem(authValidationKey(userId))||0);
+  return t>0 && (Date.now()-t)<=OFFLINE_GRACE_MS;
+}
+function usuarioEstaBaneado(user){
+  const raw=user?.banned_until;
+  if(!raw) return false;
+  const t=Date.parse(raw);
+  return Number.isFinite(t) && t>Date.now();
+}
+function errorEsBan(error){
+  const code=String(error?.code||"").toLowerCase();
+  const msg=String(error?.message||"").toLowerCase();
+  return code==="user_banned" || msg.includes("banned") || msg.includes("ban");
+}
+async function bloquearCuentaLocal(userId,msg="Esta cuenta fue bloqueada por el administrador."){
+  if(userId) localStorage.setItem(blockedUserKey(userId),"1");
+  clearInterval(authCheckTimer);
+  try{ if(sb) await sb.auth.signOut({scope:"local"}); }catch{}
+  localStorage.removeItem(LAST_USER_KEY);
+  currentUser=null;
+  movimientos=[];
+  mostrarAuth();
+  cambiarAuthTab("login");
+  setAuthMsg(msg);
+}
+async function validarCuentaActual({silencioso=false}={}){
+  if(authCheckBusy || !sb || !currentUser?.id) return true;
+
+  if(!navigator.onLine){
+    if(estaMarcadoBloqueado(currentUser.id)){
+      await bloquearCuentaLocal(currentUser.id);
+      return false;
+    }
+    if(!validacionOfflineVigente(currentUser.id)){
+      mostrarAuth();
+      setAuthMsg("Necesitás conexión a internet para validar esta cuenta. El acceso offline dura hasta 24 horas desde la última validación.");
+      return false;
+    }
+    return true;
+  }
+
+  authCheckBusy=true;
+  try{
+    const {data,error}=await sb.auth.getUser();
+
+    if(error){
+      if(errorEsBan(error)){
+        await bloquearCuentaLocal(currentUser.id);
+        return false;
+      }
+      if(!silencioso) console.warn("V10 validación de cuenta:",error);
+      return true;
+    }
+
+    const user=data?.user;
+    if(!user){
+      await bloquearCuentaLocal(currentUser.id,"La sesión ya no es válida. Iniciá sesión nuevamente.");
+      return false;
+    }
+
+    if(usuarioEstaBaneado(user)){
+      await bloquearCuentaLocal(user.id);
+      return false;
+    }
+
+    marcarValidacionCorrecta(user.id);
+
+    currentUser={
+      id:user.id,
+      email:user.email||currentUser.email||"",
+      nombre:user.user_metadata?.nombre||currentUser.nombre||"",
+      apellido:user.user_metadata?.apellido||currentUser.apellido||""
+    };
+    localStorage.setItem(LAST_USER_KEY,JSON.stringify(currentUser));
+    mostrarApp();
+    return true;
+  }catch(err){
+    if(!silencioso) console.warn("V10 validación de cuenta:",err);
+    return true;
+  }finally{
+    authCheckBusy=false;
+  }
+}
+function iniciarControlDeAcceso(){
+  clearInterval(authCheckTimer);
+  authCheckTimer=setInterval(()=>{
+    if(document.visibilityState==="visible" && currentUser?.id){
+      validarCuentaActual({silencioso:true});
+    }
+  },60000);
+}
+
 async function iniciarSesionGuardada(){
   sb=crearCliente();
-  if(!sb){ mostrarAuth(); setAuthMsg("V9 está lista, pero falta conectar Supabase. Completá SUPABASE_URL y SUPABASE_PUBLISHABLE_KEY en supabase-config.js."); return; }
+  if(!sb){ mostrarAuth(); setAuthMsg("V10 está lista, pero falta conectar Supabase. Completá SUPABASE_URL y SUPABASE_PUBLISHABLE_KEY en supabase-config.js."); return; }
 
   let recoveryDetected=esRetornoRecuperacion();
 
@@ -434,20 +550,77 @@ async function iniciarSesionGuardada(){
   });
 
   try{
-    const {data}=await sb.auth.getSession();
+    const {data:sessionData}=await sb.auth.getSession();
+
     if(recoveryDetected){
       abrirNuevaPassword();
       return;
     }
-    if(data?.session?.user){ await iniciarUsuario(data.session.user,navigator.onLine); return; }
-  }catch{}
+
+    if(sessionData?.session?.user){
+      const sessionUser=sessionData.session.user;
+
+      if(estaMarcadoBloqueado(sessionUser.id)){
+        await bloquearCuentaLocal(sessionUser.id);
+        return;
+      }
+
+      if(navigator.onLine){
+        const {data:userData,error:userError}=await sb.auth.getUser();
+
+        if(userError && errorEsBan(userError)){
+          await bloquearCuentaLocal(sessionUser.id);
+          return;
+        }
+
+        const verifiedUser=userData?.user;
+        if(verifiedUser){
+          if(usuarioEstaBaneado(verifiedUser)){
+            await bloquearCuentaLocal(verifiedUser.id);
+            return;
+          }
+          marcarValidacionCorrecta(verifiedUser.id);
+          await iniciarUsuario(verifiedUser,true);
+          iniciarControlDeAcceso();
+          return;
+        }
+      }else{
+        if(validacionOfflineVigente(sessionUser.id)){
+          await iniciarUsuario(sessionUser,false);
+          iniciarControlDeAcceso();
+          actualizarEstadoSync();
+          return;
+        }
+        mostrarAuth();
+        setAuthMsg("Necesitás conexión a internet para validar esta cuenta. El acceso offline dura hasta 24 horas desde la última validación.");
+        return;
+      }
+    }
+  }catch(err){
+    console.warn("V10 inicio de sesión guardada:",err);
+  }
 
   if(!navigator.onLine){
     try{
       const last=JSON.parse(localStorage.getItem(LAST_USER_KEY)||"null");
-      if(last?.id){ await iniciarUsuario(last,false); actualizarEstadoSync(); return; }
+      if(last?.id){
+        if(estaMarcadoBloqueado(last.id)){
+          await bloquearCuentaLocal(last.id);
+          return;
+        }
+        if(validacionOfflineVigente(last.id)){
+          await iniciarUsuario(last,false);
+          iniciarControlDeAcceso();
+          actualizarEstadoSync();
+          return;
+        }
+      }
     }catch{}
+    mostrarAuth();
+    setAuthMsg("Necesitás conexión a internet para validar esta cuenta. El acceso offline dura hasta 24 horas desde la última validación.");
+    return;
   }
+
   mostrarAuth();
 }
 
@@ -475,9 +648,12 @@ document.addEventListener("DOMContentLoaded",()=>{
   $("borrarTodo").addEventListener("click",()=>{if(confirm("¿Seguro que querés borrar TODOS los movimientos de esta cuenta?")){for(const m of movimientos){if(!m.deleted){m.deleted=true;m.updated_at=ahoraISO();m.sync_status="pending";}}guardarLocal();programarSync();}});
   $("guardarEdicion").addEventListener("click",guardarEdicion); $("cancelarEdicion").addEventListener("click",()=>$("editDialog").close());
   ["nombre","ingreso","egreso"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();agregarMovimiento();}}));
-  window.addEventListener("online",()=>{actualizarEstadoSync();sincronizarTodo();}); window.addEventListener("offline",actualizarEstadoSync);
+  window.addEventListener("online",async()=>{actualizarEstadoSync();if(await validarCuentaActual({silencioso:true})) sincronizarTodo();});
+  window.addEventListener("offline",actualizarEstadoSync);
+  window.addEventListener("focus",()=>{if(currentUser?.id) validarCuentaActual({silencioso:true});});
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&currentUser?.id) validarCuentaActual({silencioso:true});});
   window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;$("installBanner").style.display="block";});
   $("installBtn").addEventListener("click",async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBanner").style.display="none";});
-  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=9",{updateViaCache:"none"}).catch(()=>{});
+  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=10",{updateViaCache:"none"}).catch(()=>{});
   iniciarSesionGuardada();
 });
