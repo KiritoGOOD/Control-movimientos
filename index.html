@@ -115,19 +115,66 @@
     dialog::backdrop{background:rgba(0,0,0,.35)}
     .modal{padding:18px}
     .modal h3{margin-top:0}
+
+    .auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)}
+    .auth-card{width:min(440px,100%);background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:22px}
+    .auth-card h1{margin:0 0 6px;color:var(--primary);font-size:24px}
+    .auth-card p{margin:0 0 18px;color:var(--muted);font-size:13px;line-height:1.5}
+    .auth-tabs{display:flex;gap:8px;margin-bottom:16px}
+    .auth-tabs button{flex:1;background:#edf3f7;color:var(--primary)}
+    .auth-tabs button.active{background:var(--primary);color:#fff}
+    .auth-panel{display:none}.auth-panel.active{display:block}
+    .auth-panel .field{margin-bottom:12px}
+    .auth-msg{display:none;margin-top:12px;padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.4;background:#eef6fb;color:var(--primary)}
+    .account-box{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .account-email{font-size:12px;color:var(--muted);max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .sync-pill{font-size:12px;padding:7px 10px;border-radius:999px;background:#e7f1f7;color:var(--primary);font-weight:800;white-space:nowrap}
+    .sync-pill.offline{background:#fff3cd;color:#8a5a00}.sync-pill.pending{background:#fff1e6;color:#9a4d00}.sync-pill.ok{background:#e9f7ef;color:#15703d}.sync-pill.error{background:#fde8e8;color:#a71919}
+    .btn-small{padding:8px 10px;font-size:12px}
+    #mainApp[hidden],#authScreen[hidden]{display:none!important}
   </style>
 
 </head>
 <body>
+
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <h1>Control de Movimientos</h1>
+    <p>Ingresá con tu cuenta para recuperar y sincronizar tus datos en cualquier dispositivo.</p>
+    <div class="auth-tabs">
+      <button type="button" id="tabLogin" class="active">Iniciar sesión</button>
+      <button type="button" id="tabRegister">Crear cuenta</button>
+    </div>
+    <div id="panelLogin" class="auth-panel active">
+      <div class="field"><label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="email" placeholder="correo@ejemplo.com"></div>
+      <div class="field"><label for="loginPassword">Contraseña</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Tu contraseña"></div>
+      <button class="btn-primary" id="loginBtn" style="width:100%">ENTRAR</button>
+    </div>
+    <div id="panelRegister" class="auth-panel">
+      <div class="field"><label for="registerEmail">Email</label><input id="registerEmail" type="email" autocomplete="email" placeholder="correo@ejemplo.com"></div>
+      <div class="field"><label for="registerPassword">Contraseña</label><input id="registerPassword" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres"></div>
+      <button class="btn-primary" id="registerBtn" style="width:100%">CREAR CUENTA</button>
+    </div>
+    <div id="authMsg" class="auth-msg"></div>
+    <div class="footer-note" style="margin-top:14px">La primera vez que iniciás sesión en un dispositivo necesitás internet. Después podés seguir cargando movimientos sin conexión y se sincronizan cuando vuelva la señal.</div>
+  </div>
+</div>
+
+<div id="mainApp" hidden>
 
 <div class="app">
   <div class="topbar">
     <div class="brand">
       <div>
         <h1>Control de Movimientos</h1>
-        <small>Cargas, retiros y resultado · guardado local</small>
+        <small>Cargas, retiros y resultado · sincronización en la nube</small>
       </div>
-      <div class="pill">Gs.</div>
+      <div class="account-box">
+        <span id="syncStatus" class="sync-pill">Preparando…</span>
+        <span id="accountEmail" class="account-email"></span>
+        <button id="syncNow" class="btn-secondary btn-small" type="button">Sincronizar</button>
+        <button id="logoutBtn" class="btn-secondary btn-small" type="button">Salir</button>
+      </div>
     </div>
   </div>
 
@@ -224,9 +271,11 @@
     </div>
     <input id="fileImport" type="file" accept=".json,application/json" hidden>
     <div class="footer-note">
-      Los datos quedan guardados solo en este dispositivo/navegador. Para no perderlos al cambiar de celular o borrar datos del navegador, exportá un backup periódicamente.
+      Los movimientos se guardan en este dispositivo y, cuando hay internet, se sincronizan con tu cuenta. El backup manual sigue disponible como respaldo adicional.
     </div>
   </section>
+</div>
+
 </div>
 
 <div class="install" id="installBanner">
@@ -253,6 +302,8 @@
   </div>
 </dialog>
 
-<script src="app.js?v=7"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js?v=8"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>
