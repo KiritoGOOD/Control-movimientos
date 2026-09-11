@@ -365,6 +365,150 @@ body.dark-mode .summary .box{
 body.dark-mode .profile-separator{border-top-color:#2a3643}
 body.dark-mode .profile-help{color:#9aa8b6}
 
+
+/* V11.4 — dark mode completo: login + resumen/tabs */
+body.dark-mode{
+  background:#0d1319!important;
+  color:#edf3f8!important;
+}
+
+/* LOGIN / REGISTRO */
+body.dark-mode #authScreen{
+  background:#0d1319!important;
+}
+body.dark-mode #authCard,
+body.dark-mode .auth-card{
+  background:#171e26!important;
+  color:#edf3f8!important;
+  border-color:#2a3643!important;
+  box-shadow:0 18px 40px rgba(0,0,0,.4)!important;
+}
+body.dark-mode #authCard h1,
+body.dark-mode #authCard h2,
+body.dark-mode #authCard h3,
+body.dark-mode .auth-card h1,
+body.dark-mode .auth-card h2,
+body.dark-mode .auth-card h3{
+  color:#edf3f8!important;
+}
+body.dark-mode #authCard p,
+body.dark-mode #authCard .auth-subtitle,
+body.dark-mode .auth-card p,
+body.dark-mode .auth-card .auth-subtitle{
+  color:#9aa8b6!important;
+}
+body.dark-mode #authCard label,
+body.dark-mode .auth-card label{
+  color:#b8c4cf!important;
+}
+body.dark-mode #authCard input,
+body.dark-mode .auth-card input{
+  background:#0f171f!important;
+  color:#edf3f8!important;
+  border-color:#334252!important;
+}
+body.dark-mode #authCard input::placeholder,
+body.dark-mode .auth-card input::placeholder{
+  color:#718090!important;
+}
+body.dark-mode #forgotBtn,
+body.dark-mode .forgot-link,
+body.dark-mode #authCard a{
+  color:#73c2ee!important;
+}
+body.dark-mode #forgotBtn:hover,
+body.dark-mode .forgot-link:hover,
+body.dark-mode #authCard a:hover{
+  color:#9bd5f5!important;
+}
+body.dark-mode .auth-tab,
+body.dark-mode .auth-tabs button{
+  background:#1d2732!important;
+  color:#b8c4cf!important;
+  border-color:#2a3643!important;
+}
+body.dark-mode .auth-tab.active,
+body.dark-mode .auth-tabs button.active{
+  background:#155b87!important;
+  color:white!important;
+}
+body.dark-mode #authMsg,
+body.dark-mode .auth-message{
+  background:#122231!important;
+  color:#85cdef!important;
+  border-color:#23455f!important;
+}
+
+/* RESUMEN MENSUAL */
+body.dark-mode .summary-card,
+body.dark-mode .summary-item,
+body.dark-mode .summary .box,
+body.dark-mode .summary-box,
+body.dark-mode #summaryCard,
+body.dark-mode #resumenMensual .box,
+body.dark-mode #resumenMensual > div{
+  background:#121922!important;
+  color:#edf3f8!important;
+  border-color:#2a3643!important;
+}
+body.dark-mode .summary-card .label,
+body.dark-mode .summary-item .label,
+body.dark-mode .summary-box .label{
+  color:#9aa8b6!important;
+}
+body.dark-mode #totalIngresos{color:#66d896!important}
+body.dark-mode #totalEgresos{color:#ff8585!important}
+body.dark-mode #saldoGeneral{color:#6cc6f2!important}
+
+/* TABS PRINCIPALES */
+body.dark-mode .tabs{
+  background:#121922!important;
+  border-color:#2a3643!important;
+}
+body.dark-mode .tab{
+  background:#1a232d!important;
+  color:#a8b5c2!important;
+  border-color:#2a3643!important;
+}
+body.dark-mode .tab.active{
+  background:#155b87!important;
+  color:#8ed4fb!important;
+  border-color:#155b87!important;
+}
+body.dark-mode .tab:hover{
+  background:#22303d!important;
+}
+
+/* Botones flecha del mes */
+body.dark-mode #prevMonth,
+body.dark-mode #nextMonth{
+  background:#1d2732!important;
+  color:#73c2ee!important;
+  border-color:#2a3643!important;
+}
+
+/* Inputs y selects generales */
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea{
+  background:#0f171f!important;
+  color:#edf3f8!important;
+  border-color:#334252!important;
+}
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder{
+  color:#718090!important;
+}
+
+/* asegurar que las tarjetas del resumen no hereden blanco */
+body.dark-mode .metric,
+body.dark-mode .metric-card,
+body.dark-mode .stat-card{
+  background:#121922!important;
+  color:#edf3f8!important;
+  border-color:#2a3643!important;
+}
+
 </style>
 
 
@@ -715,7 +859,7 @@ body.dark-mode .profile-help{color:#9aa8b6}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-<script src="supabase-config.js?v=11.3"></script>
-<script src="app.js?v=11.3"></script>
+<script src="supabase-config.js?v=11.4"></script>
+<script src="app.js?v=11.4"></script>
 </body>
 </html>

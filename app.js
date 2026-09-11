@@ -1016,6 +1016,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&currentUser?.id) validarCuentaActual({silencioso:true});});
   window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;$("installBanner").style.display="block";});
   $("installBtn").addEventListener("click",async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBanner").style.display="none";});
-  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=11.3",{updateViaCache:"none"}).catch(()=>{});
+  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=11.4",{updateViaCache:"none"}).catch(()=>{});
   iniciarSesionGuardada();
 });
