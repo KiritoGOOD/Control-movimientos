@@ -135,6 +135,8 @@
   .account-identity{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
 .account-name{font-weight:700}
 .account-email{font-size:12px;opacity:.72;font-weight:400}
+.auth-link{display:block;width:100%;margin-top:10px;background:none;border:0;color:inherit;opacity:.8;text-decoration:underline;cursor:pointer;font:inherit}
+.auth-link:hover{opacity:1}
 </style>
 
 </head>
@@ -152,6 +154,7 @@
       <div class="field"><label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="email" placeholder="correo@ejemplo.com"></div>
       <div class="field"><label for="loginPassword">Contraseña</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Tu contraseña"></div>
       <button class="btn-primary" id="loginBtn" style="width:100%">ENTRAR</button>
+      <button type="button" id="forgotPasswordBtn" class="auth-link">¿Olvidaste tu contraseña?</button>
     </div>
     <div id="panelRegister" class="auth-panel">
       <div class="field"><label for="registerNombre">Nombre</label><input id="registerNombre" type="text" autocomplete="given-name" placeholder="Tu nombre"></div>
@@ -326,8 +329,39 @@
   </div>
 </dialog>
 
+
+<dialog id="forgotDialog">
+  <div class="modal">
+    <h3>Recuperar contraseña</h3>
+    <p>Ingresá el email de tu cuenta. Te enviaremos un enlace para crear una contraseña nueva.</p>
+    <div class="form-grid">
+      <div style="grid-column:1/-1"><label for="forgotEmail">Email</label><input id="forgotEmail" type="email" autocomplete="email" placeholder="correo@ejemplo.com"></div>
+    </div>
+    <div class="actions">
+      <button class="btn-primary" id="sendRecoveryBtn" type="button">Enviar enlace</button>
+      <button class="btn-secondary" id="cancelRecoveryBtn" type="button">Cancelar</button>
+    </div>
+    <div id="forgotMsg" class="auth-msg"></div>
+  </div>
+</dialog>
+
+<dialog id="resetPasswordDialog">
+  <div class="modal">
+    <h3>Nueva contraseña</h3>
+    <p>Creá una contraseña nueva para tu cuenta.</p>
+    <div class="form-grid">
+      <div style="grid-column:1/-1"><label for="newPassword">Nueva contraseña</label><input id="newPassword" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres"></div>
+      <div style="grid-column:1/-1"><label for="newPasswordConfirm">Confirmar contraseña</label><input id="newPasswordConfirm" type="password" autocomplete="new-password" placeholder="Repetí tu contraseña"></div>
+    </div>
+    <div class="actions">
+      <button class="btn-primary" id="saveNewPasswordBtn" type="button">Guardar contraseña</button>
+    </div>
+    <div id="resetPasswordMsg" class="auth-msg"></div>
+  </div>
+</dialog>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=8.8"></script>
-<script src="app.js?v=8.8"></script>
+<script src="supabase-config.js?v=9"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>

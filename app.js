@@ -176,6 +176,63 @@ function mostrarApp(){
 function cambiarAuthTab(tab){
   const login=tab==="login"; $("tabLogin").classList.toggle("active",login); $("tabRegister").classList.toggle("active",!login); $("panelLogin").classList.toggle("active",login); $("panelRegister").classList.toggle("active",!login); setAuthMsg("",false);
 }
+function esRetornoRecuperacion(){
+  const hash=new URLSearchParams(window.location.hash.replace(/^#/,""));
+  const query=new URLSearchParams(window.location.search);
+  return hash.get("type")==="recovery" || query.get("type")==="recovery";
+}
+
+function abrirRecuperacion(){
+  $("forgotEmail").value=$("loginEmail").value.trim();
+  $("forgotMsg").textContent="";
+  $("forgotDialog").showModal();
+}
+
+async function enviarRecuperacion(){
+  if(!sb){ $("forgotMsg").textContent="No se pudo conectar con el servicio."; return; }
+  if(!navigator.onLine){ $("forgotMsg").textContent="Necesitás internet para recuperar tu contraseña."; return; }
+  const email=$("forgotEmail").value.trim();
+  if(!email){ $("forgotMsg").textContent="Ingresá tu email."; return; }
+  $("forgotMsg").textContent="Enviando…";
+  const {error}=await sb.auth.resetPasswordForEmail(email,{
+    redirectTo:"https://kiritogood.github.io/Control-movimientos/"
+  });
+  if(error){ $("forgotMsg").textContent=error.message; return; }
+  $("forgotMsg").textContent="Enlace enviado. Revisá tu correo y abrí el mensaje de recuperación.";
+}
+
+function abrirNuevaPassword(){
+  mostrarAuth();
+  $("resetPasswordMsg").textContent="";
+  $("newPassword").value="";
+  $("newPasswordConfirm").value="";
+  if(!$("resetPasswordDialog").open) $("resetPasswordDialog").showModal();
+}
+
+async function guardarNuevaPassword(){
+  if(!sb) return;
+  const password=$("newPassword").value;
+  const confirmPassword=$("newPasswordConfirm").value;
+  if(password.length<6){ $("resetPasswordMsg").textContent="La contraseña debe tener al menos 6 caracteres."; return; }
+  if(password!==confirmPassword){ $("resetPasswordMsg").textContent="Las contraseñas no coinciden."; return; }
+  $("resetPasswordMsg").textContent="Guardando…";
+  const {error}=await sb.auth.updateUser({password});
+  if(error){ $("resetPasswordMsg").textContent=error.message; return; }
+  $("resetPasswordMsg").textContent="Contraseña actualizada correctamente.";
+  try{ await sb.auth.signOut(); }catch{}
+  currentUser=null;
+  movimientos=[];
+  localStorage.removeItem(LAST_USER_KEY);
+  history.replaceState(null,"",window.location.pathname);
+  setTimeout(()=>{
+    $("resetPasswordDialog").close();
+    mostrarAuth();
+    cambiarAuthTab("login");
+    setAuthMsg("Contraseña actualizada. Ya podés iniciar sesión con la nueva contraseña.");
+    $("loginEmail").focus();
+  },700);
+}
+
 async function login(){
   if(!sb){ setAuthMsg("Primero configurá Supabase en supabase-config.js."); return; }
   if(!navigator.onLine){ setAuthMsg("Para iniciar sesión por primera vez necesitás internet."); return; }
@@ -354,7 +411,7 @@ async function sincronizarTodo(){
     render();
 
   }catch(err){
-    console.error("V8.2 sync:",err);
+    console.error("V9 sync:",err);
     actualizarEstadoSync("Error de sincronización","error");
   }finally{
     syncBusy=false;
@@ -365,13 +422,31 @@ function programarSync(){ clearTimeout(syncTimer); syncTimer=setTimeout(()=>sinc
 
 async function iniciarSesionGuardada(){
   sb=crearCliente();
-  if(!sb){ mostrarAuth(); setAuthMsg("V8 está lista, pero falta conectar Supabase. Completá SUPABASE_URL y SUPABASE_PUBLISHABLE_KEY en supabase-config.js."); return; }
+  if(!sb){ mostrarAuth(); setAuthMsg("V9 está lista, pero falta conectar Supabase. Completá SUPABASE_URL y SUPABASE_PUBLISHABLE_KEY en supabase-config.js."); return; }
+
+  let recoveryDetected=esRetornoRecuperacion();
+
+  sb.auth.onAuthStateChange((event)=>{
+    if(event==="PASSWORD_RECOVERY"){
+      recoveryDetected=true;
+      setTimeout(abrirNuevaPassword,0);
+    }
+  });
+
   try{
     const {data}=await sb.auth.getSession();
+    if(recoveryDetected){
+      abrirNuevaPassword();
+      return;
+    }
     if(data?.session?.user){ await iniciarUsuario(data.session.user,navigator.onLine); return; }
   }catch{}
+
   if(!navigator.onLine){
-    try{ const last=JSON.parse(localStorage.getItem(LAST_USER_KEY)||"null"); if(last?.id){ await iniciarUsuario(last,false); actualizarEstadoSync(); return; } }catch{}
+    try{
+      const last=JSON.parse(localStorage.getItem(LAST_USER_KEY)||"null");
+      if(last?.id){ await iniciarUsuario(last,false); actualizarEstadoSync(); return; }
+    }catch{}
   }
   mostrarAuth();
 }
@@ -379,6 +454,12 @@ async function iniciarSesionGuardada(){
 document.addEventListener("DOMContentLoaded",()=>{
   $("fecha").value=hoyISO(); ["ingreso","egreso","eIngreso","eEgreso"].forEach(activarFormatoGs);
   $("tabLogin").addEventListener("click",()=>cambiarAuthTab("login")); $("tabRegister").addEventListener("click",()=>cambiarAuthTab("register"));
+  $("forgotPasswordBtn").addEventListener("click",abrirRecuperacion);
+  $("sendRecoveryBtn").addEventListener("click",enviarRecuperacion);
+  $("cancelRecoveryBtn").addEventListener("click",()=>$("forgotDialog").close());
+  $("forgotEmail").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();enviarRecuperacion();}});
+  $("saveNewPasswordBtn").addEventListener("click",guardarNuevaPassword);
+  $("newPasswordConfirm").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();guardarNuevaPassword();}});
   $("profileBtn").addEventListener("click",abrirPerfil);
   $("saveProfileBtn").addEventListener("click",guardarPerfil);
   $("cancelProfileBtn").addEventListener("click",()=>$("profileDialog").close());
@@ -397,6 +478,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   window.addEventListener("online",()=>{actualizarEstadoSync();sincronizarTodo();}); window.addEventListener("offline",actualizarEstadoSync);
   window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;$("installBanner").style.display="block";});
   $("installBtn").addEventListener("click",async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBanner").style.display="none";});
-  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=8.8",{updateViaCache:"none"}).catch(()=>{});
+  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=9",{updateViaCache:"none"}).catch(()=>{});
   iniciarSesionGuardada();
 });
