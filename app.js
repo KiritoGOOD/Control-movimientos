@@ -189,7 +189,7 @@ async function logout(){
 }
 
 async function iniciarUsuario(user, sincronizar=true){
-  currentUser={id:user.id,email:user.email||""}; localStorage.setItem(LAST_USER_KEY,JSON.stringify(currentUser)); cargarLocal(); await migrarV7SiCorresponde(); mostrarApp(); render(); if(sincronizar) sincronizarTodo();
+  currentUser={id:user.id,email:user.email||""}; localStorage.setItem(LAST_USER_KEY,JSON.stringify(currentUser)); cargarLocal(); await migrarV7SiCorresponde(); mostrarApp(); render(); if(sincronizar) await sincronizarTodo();
 }
 async function migrarV7SiCorresponde(){
   try{
@@ -219,25 +219,82 @@ function fromDb(r){ return normalizarMovimiento({...r,sync_status:"synced"},fals
 
 async function sincronizarTodo(){
   if(syncBusy||!currentUser||!sb||!navigator.onLine){ actualizarEstadoSync(); return; }
-  syncBusy=true; actualizarEstadoSync();
+
+  syncBusy=true;
+  actualizarEstadoSync();
+
   try{
-    const {data:remote,error:pullError}=await sb.from("movimientos").select("*").eq("user_id",currentUser.id);
+    // V8.2: confirmar la sesión real antes de leer/escribir en la nube.
+    let {data:userData,error:userError}=await sb.auth.getUser();
+    if(userError || !userData?.user){
+      const {error:refreshError}=await sb.auth.refreshSession();
+      if(refreshError) throw refreshError;
+      ({data:userData,error:userError}=await sb.auth.getUser());
+      if(userError || !userData?.user) throw userError || new Error("No hay una sesión válida.");
+    }
+
+    const cloudUser=userData.user;
+    currentUser={id:cloudUser.id,email:cloudUser.email||currentUser.email||""};
+    localStorage.setItem(LAST_USER_KEY,JSON.stringify(currentUser));
+
+    // 1) Descargar primero todo lo que ya existe en la nube para esta cuenta.
+    const {data:remote,error:pullError}=await sb
+      .from("movimientos")
+      .select("*")
+      .eq("user_id",currentUser.id);
+
     if(pullError) throw pullError;
+
     const remoteMap=new Map((remote||[]).map(r=>[r.id,r]));
+    const localMap=new Map(movimientos.map(m=>[m.id,m]));
+
+    // Incorporar movimientos que existen en otro dispositivo y resolver versiones.
+    for(const r of (remote||[])){
+      const local=localMap.get(r.id);
+      if(!local){
+        localMap.set(r.id,fromDb(r));
+        continue;
+      }
+      const localT=Date.parse(local.updated_at||0)||0;
+      const remoteT=Date.parse(r.updated_at||0)||0;
+      if(local.sync_status!=="pending" || remoteT>localT){
+        localMap.set(r.id,fromDb(r));
+      }
+    }
+    movimientos=[...localMap.values()];
+
+    // 2) Subir los cambios locales pendientes.
     const pendientes=movimientos.filter(m=>m.sync_status==="pending");
     for(const m of pendientes){
-      const r=remoteMap.get(m.id); const localT=Date.parse(m.updated_at||0)||0, remoteT=r?(Date.parse(r.updated_at||0)||0):0;
+      const r=remoteMap.get(m.id);
+      const localT=Date.parse(m.updated_at||0)||0;
+      const remoteT=r?(Date.parse(r.updated_at||0)||0):0;
+
       if(!r || localT>=remoteT){
         const {error}=await sb.from("movimientos").upsert(dbRow(m),{onConflict:"id"});
         if(error) throw error;
       }
     }
-    const {data:finalRows,error:finalError}=await sb.from("movimientos").select("*").eq("user_id",currentUser.id);
+
+    // 3) Volver a descargar: esta respuesta es la verdad final de la nube.
+    const {data:finalRows,error:finalError}=await sb
+      .from("movimientos")
+      .select("*")
+      .eq("user_id",currentUser.id);
+
     if(finalError) throw finalError;
-    movimientos=(finalRows||[]).map(fromDb); guardarLocal(true); render();
+
+    movimientos=(finalRows||[]).map(fromDb);
+    guardarLocal(true);
+    render();
+
   }catch(err){
-    console.error(err); actualizarEstadoSync("Error de sincronización","error");
-  }finally{ syncBusy=false; actualizarEstadoSync(); }
+    console.error("V8.2 sync:",err);
+    actualizarEstadoSync("Error de sincronización","error");
+  }finally{
+    syncBusy=false;
+    actualizarEstadoSync();
+  }
 }
 function programarSync(){ clearTimeout(syncTimer); syncTimer=setTimeout(()=>sincronizarTodo(),500); }
 
@@ -271,6 +328,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   window.addEventListener("online",()=>{actualizarEstadoSync();sincronizarTodo();}); window.addEventListener("offline",actualizarEstadoSync);
   window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;$("installBanner").style.display="block";});
   $("installBtn").addEventListener("click",async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBanner").style.display="none";});
-  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=8.1",{updateViaCache:"none"}).catch(()=>{});
+  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=8.2",{updateViaCache:"none"}).catch(()=>{});
   iniciarSesionGuardada();
 });
