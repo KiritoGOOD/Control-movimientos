@@ -11,6 +11,17 @@ let sb = null;
 let syncBusy = false;
 let syncTimer = null;
 
+const AUTH_VALIDATION_PREFIX = "control_movimientos_v11_auth_ok_";
+const BLOCKED_USER_PREFIX = "control_movimientos_v11_blocked_";
+const OFFLINE_GRACE_MS = 24*60*60*1000;
+let authCheckTimer = null;
+let authCheckBusy = false;
+
+let personasAbiertas = new Set();
+let playerActual = null;
+let playerScope = "month";
+
+
 let mesSeleccionado = new Date();
 mesSeleccionado = new Date(mesSeleccionado.getFullYear(), mesSeleccionado.getMonth(), 1);
 
@@ -44,6 +55,110 @@ function esDelMes(fecha, mes=mesSeleccionado){
 function nombreMes(d){ return new Intl.DateTimeFormat("es-PY",{month:"long",year:"numeric"}).format(d); }
 function activos(){ return movimientos.filter(m => !m.deleted); }
 function movimientosDelMes(){ return activos().filter(m => esDelMes(m.fecha)); }
+
+function claveNombre(s){ return normalizarNombre(s).toLocaleLowerCase("es"); }
+function resumenArr(arr){
+  return arr.reduce((r,m)=>{
+    r.ingreso+=num(m.ingreso); r.egreso+=num(m.egreso); r.movimientos++;
+    if(num(m.ingreso)>0) r.cargas++;
+    if(num(m.egreso)>0) r.retiros++;
+    return r;
+  },{ingreso:0,egreso:0,movimientos:0,cargas:0,retiros:0});
+}
+function inicioSemanaISO(){
+  const d=new Date(); d.setHours(0,0,0,0);
+  const day=(d.getDay()+6)%7;
+  d.setDate(d.getDate()-day);
+  const off=d.getTimezoneOffset();
+  return new Date(d.getTime()-off*60000).toISOString().slice(0,10);
+}
+function arrHoy(){ const h=hoyISO(); return activos().filter(m=>String(m.fecha).slice(0,10)===h); }
+function arrSemana(){ const ini=inicioSemanaISO(), fin=hoyISO(); return activos().filter(m=>m.fecha>=ini && m.fecha<=fin); }
+function movimientosPersona(nombre,scope="month"){
+  const key=claveNombre(nombre);
+  const base=scope==="all"?activos():movimientosDelMes();
+  return base.filter(m=>claveNombre(m.nombre)===key).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")||(b.creado||0)-(a.creado||0));
+}
+function nombresUnicos(){
+  const map=new Map();
+  for(const m of activos().sort((a,b)=>(b.creado||0)-(a.creado||0))){
+    const k=claveNombre(m.nombre);
+    if(k && !map.has(k)) map.set(k,m.nombre);
+  }
+  return [...map.values()];
+}
+function fechaPY(iso){
+  const p=String(iso||"").slice(0,10).split("-");
+  return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:String(iso||"");
+}
+function elegirNombre(nombre){
+  $("nombre").value=nombre;
+  actualizarUltimoMovimiento();
+  $("ingreso").focus();
+}
+function renderSugerenciasNombres(){
+  const nombres=nombresUnicos();
+  $("nombresGuardados").innerHTML=nombres.map(n=>`<option value="${escapeHtml(n)}"></option>`).join("");
+  const recientes=nombres.slice(0,6);
+  $("recentNames").innerHTML=recientes.map(n=>`<button type="button" class="name-chip" data-name="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join("");
+  $("recentNames").querySelectorAll(".name-chip").forEach(btn=>btn.addEventListener("click",()=>elegirNombre(btn.dataset.name)));
+}
+function actualizarUltimoMovimiento(){
+  const nombre=normalizarNombre($("nombre").value);
+  const el=$("lastPlayerMove");
+  if(!nombre){ el.textContent=""; return; }
+  const arr=movimientosPersona(nombre,"all");
+  if(!arr.length){ el.textContent="Jugador nuevo."; return; }
+  const m=arr[0], tipo=num(m.ingreso)>0?"Carga":"Retiro", valor=num(m.ingreso)>0?m.ingreso:m.egreso;
+  el.innerHTML=`Último movimiento: <b>${tipo} ${fmtGs(valor)}</b> · ${fechaPY(m.fecha)}`;
+}
+function posibleDuplicado(nombre,ingreso,egreso){
+  const now=Date.now(), ventana=10*60*1000, key=claveNombre(nombre);
+  return activos().find(m =>
+    claveNombre(m.nombre)===key &&
+    num(m.ingreso)===ingreso &&
+    num(m.egreso)===egreso &&
+    Math.abs(now-Number(m.creado||0))<=ventana
+  );
+}
+function usarNombreDesdeResumen(encoded){
+  const nombre=decodeURIComponent(encoded);
+  elegirNombre(nombre);
+  document.querySelector('[data-tab="historial"]')?.click();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function togglePersona(encoded){
+  const nombre=decodeURIComponent(encoded), key=claveNombre(nombre);
+  if(personasAbiertas.has(key)) personasAbiertas.delete(key); else personasAbiertas.add(key);
+  renderPersonas();
+}
+function abrirJugador(encoded){
+  const nombre=decodeURIComponent(encoded);
+  playerActual=nombre; playerScope="month";
+  renderJugadorDialog();
+  $("playerDialog").showModal();
+}
+function renderJugadorDialog(){
+  if(!playerActual) return;
+  $("playerDialogTitle").textContent=playerActual;
+  const arr=movimientosPersona(playerActual,playerScope), r=resumenArr(arr);
+  $("playerMonthBtn").className="btn-secondary btn-small"+(playerScope==="month"?" active":"");
+  $("playerAllBtn").className="btn-secondary btn-small"+(playerScope==="all"?" active":"");
+  $("playerStats").innerHTML=`
+    <div class="mini-stat"><small>Cargas</small><b class="tag-in">${fmtGs(r.ingreso)}</b></div>
+    <div class="mini-stat"><small>Retiros</small><b class="tag-out">${fmtGs(r.egreso)}</b></div>
+    <div class="mini-stat"><small>Resultado</small><b>${fmtGs(r.ingreso-r.egreso)}</b></div>
+    <div class="mini-stat"><small>N.º de cargas</small><b>${r.cargas}</b></div>
+    <div class="mini-stat"><small>N.º de retiros</small><b>${r.retiros}</b></div>
+    <div class="mini-stat"><small>Movimientos</small><b>${r.movimientos}</b></div>`;
+  $("playerHistory").innerHTML=arr.length?arr.map(m=>`
+    <div class="player-history-row">
+      <span>${fechaPY(m.fecha)}</span>
+      <span class="tag-in">${m.ingreso?fmtGs(m.ingreso):"—"}</span>
+      <span class="tag-out">${m.egreso?fmtGs(m.egreso):"—"}</span>
+    </div>`).join(""):`<div class="empty">Sin movimientos en este período.</div>`;
+}
+
 
 function hoyISO(){
   const d = new Date(); const off = d.getTimezoneOffset();
@@ -100,19 +215,26 @@ function agregarMovimiento(){
   const nombre=normalizarNombre($("nombre").value), ingreso=num($("ingreso").value), egreso=num($("egreso").value);
   if(!nombre){ alert("Ingrese un nombre."); $("nombre").focus(); return; }
   if(ingreso<=0 && egreso<=0){ alert("Ingrese un importe en Carga o Retiro."); return; }
+
+  const dup=posibleDuplicado(nombre,ingreso,egreso);
+  if(dup){
+    const tipo=ingreso>0?"carga":"retiro", valor=ingreso>0?ingreso:egreso;
+    const ok=confirm(`Hay un movimiento muy parecido registrado hace poco:\n\n${nombre} · ${tipo} ${fmtGs(valor)} · ${fechaPY(dup.fecha)}\n\n¿Guardar igualmente?`);
+    if(!ok) return;
+  }
+
   movimientos.push(normalizarMovimiento({
     id:nuevoId(), fecha:$("fecha").value||hoyISO(), nombre, ingreso, egreso,
     observacion:$("obs").value.trim(), creado:Date.now(), updated_at:ahoraISO(), deleted:false
   }, true));
 
-  // V8.3: respuesta visual inmediata. El movimiento aparece antes de cualquier llamada a la nube.
   guardarLocal(true);
   render();
   actualizarEstadoSync();
 
-  $("nombre").value=""; $("ingreso").value=""; $("egreso").value=""; $("obs").value=""; $("fecha").value=hoyISO(); $("nombre").focus();
-
-  // La sincronización ocurre en segundo plano sin bloquear la interfaz.
+  $("nombre").value=""; $("ingreso").value=""; $("egreso").value=""; $("obs").value=""; $("fecha").value=hoyISO();
+  actualizarUltimoMovimiento();
+  $("nombre").focus();
   programarSync();
 }
 function eliminar(id){
@@ -137,31 +259,186 @@ function guardarEdicion(){
 }
 
 function resumenGeneral(){
-  const delMes=movimientosDelMes(), ing=delMes.reduce((a,m)=>a+num(m.ingreso),0), egr=delMes.reduce((a,m)=>a+num(m.egreso),0);
-  $("monthLabel").textContent=nombreMes(mesSeleccionado); $("totalIngresos").textContent=fmtGs(ing); $("totalEgresos").textContent=fmtGs(egr); $("saldoGeneral").textContent=fmtGs(ing-egr);
-  $("contador").textContent=`${delMes.length} movimiento${delMes.length===1?"":"s"} en este mes`;
+  const delMes=movimientosDelMes(), r=resumenArr(delMes);
+  $("monthLabel").textContent=nombreMes(mesSeleccionado);
+  $("totalIngresos").textContent=fmtGs(r.ingreso);
+  $("totalEgresos").textContent=fmtGs(r.egreso);
+  $("saldoGeneral").textContent=fmtGs(r.ingreso-r.egreso);
+  $("contador").textContent=`${r.movimientos} movimiento${r.movimientos===1?"":"s"} en este mes`;
+
+  const hoy=resumenArr(arrHoy());
+  $("todayCount").textContent=hoy.movimientos;
+  $("todayIn").textContent=fmtGs(hoy.ingreso);
+  $("todayOut").textContent=fmtGs(hoy.egreso);
+  $("todayNet").textContent=fmtGs(hoy.ingreso-hoy.egreso);
 }
 function renderHistorial(){
   const q=$("buscar").value.toLowerCase().trim(), tipo=$("filtroTipo").value;
   let arr=movimientosDelMes().sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")||(b.creado||0)-(a.creado||0));
   arr=arr.filter(m=>{ const texto=`${m.nombre} ${m.observacion||""}`.toLowerCase(); return (!q||texto.includes(q)) && (tipo==="todos"||(tipo==="ingreso"?num(m.ingreso)>0:num(m.egreso)>0)); });
-  $("tbody").innerHTML=arr.map(m=>`<tr><td>${escapeHtml(m.fecha||"")}</td><td><strong>${escapeHtml(m.nombre)}</strong></td><td class="money tag-in">${m.ingreso?fmtGs(m.ingreso):""}</td><td class="money tag-out">${m.egreso?fmtGs(m.egreso):""}</td><td class="money"><strong>${fmtGs(num(m.ingreso)-num(m.egreso))}</strong></td><td>${escapeHtml(m.observacion||"")}</td><td><div class="row-actions"><button class="btn-secondary" onclick="editar('${m.id}')">Editar</button><button class="btn-danger" onclick="eliminar('${m.id}')">Eliminar</button></div></td></tr>`).join("");
+  $("tbody").innerHTML=arr.map(m=>`<tr><td>${fechaPY(m.fecha)}</td><td><strong>${escapeHtml(m.nombre)}</strong></td><td class="money tag-in">${m.ingreso?fmtGs(m.ingreso):""}</td><td class="money tag-out">${m.egreso?fmtGs(m.egreso):""}</td><td class="money"><strong>${fmtGs(num(m.ingreso)-num(m.egreso))}</strong></td><td>${escapeHtml(m.observacion||"")}</td><td><div class="row-actions"><button class="btn-secondary" onclick="editar('${m.id}')">Editar</button><button class="btn-danger" onclick="eliminar('${m.id}')">Eliminar</button></div></td></tr>`).join("");
   $("emptyHist").style.display=arr.length?"none":"block";
 }
 function renderPersonas(){
-  const map=new Map(); for(const m of movimientosDelMes()){ const key=m.nombre.trim().toLocaleLowerCase("es"); if(!map.has(key)) map.set(key,{nombre:m.nombre,ingreso:0,egreso:0,movimientos:0}); const x=map.get(key); x.ingreso+=num(m.ingreso); x.egreso+=num(m.egreso); x.movimientos++; }
-  const q=$("buscarPersona").value.toLowerCase().trim(); const arr=[...map.values()].filter(x=>!q||x.nombre.toLowerCase().includes(q)).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
-  $("resumenPersonas").innerHTML=arr.map(x=>`<div class="person"><strong>${escapeHtml(x.nombre)}</strong><small>Cargas: <b class="tag-in">${fmtGs(x.ingreso)}</b></small><small>Retiros: <b class="tag-out">${fmtGs(x.egreso)}</b></small><small>Saldo: <b>${fmtGs(x.ingreso-x.egreso)}</b></small><small>Movimientos: ${x.movimientos}</small></div>`).join("");
+  const map=new Map();
+  for(const m of movimientosDelMes()){
+    const key=claveNombre(m.nombre);
+    if(!map.has(key)) map.set(key,{nombre:m.nombre,ingreso:0,egreso:0,movimientos:0,items:[]});
+    const x=map.get(key); x.ingreso+=num(m.ingreso); x.egreso+=num(m.egreso); x.movimientos++; x.items.push(m);
+  }
+  const q=$("buscarPersona").value.toLowerCase().trim();
+  const arr=[...map.values()].filter(x=>!q||x.nombre.toLowerCase().includes(q)).sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
+  $("resumenPersonas").innerHTML=arr.map(x=>{
+    const enc=encodeURIComponent(x.nombre), open=personasAbiertas.has(claveNombre(x.nombre));
+    const items=x.items.sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")||(b.creado||0)-(a.creado||0));
+    return `<div class="person ${open?"open":""}">
+      <div class="person-head" onclick="togglePersona('${enc}')">
+        <div class="person-title-row"><strong>${escapeHtml(x.nombre)}</strong><span class="person-expand">⌄</span></div>
+        <small>Cargas: <b class="tag-in">${fmtGs(x.ingreso)}</b></small>
+        <small>Retiros: <b class="tag-out">${fmtGs(x.egreso)}</b></small>
+        <small>Resultado: <b>${fmtGs(x.ingreso-x.egreso)}</b> · ${x.movimientos} mov.</small>
+      </div>
+      <div class="person-details">
+        ${items.map(m=>`<div class="person-detail-row"><span>${fechaPY(m.fecha)}</span><span class="tag-in">${m.ingreso?fmtGs(m.ingreso):"—"}</span><span class="tag-out">${m.egreso?fmtGs(m.egreso):"—"}</span></div>`).join("")}
+        <div class="person-actions">
+          <button class="btn-primary" onclick="event.stopPropagation();usarNombreDesdeResumen('${enc}')">Nueva carga / retiro</button>
+          <button class="btn-secondary" onclick="event.stopPropagation();abrirJugador('${enc}')">Ver estadísticas</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
   $("emptyPersonas").style.display=arr.length?"none":"block";
 }
-function render(){ resumenGeneral(); renderHistorial(); renderPersonas(); actualizarEstadoSync(); }
+function renderEstadisticas(){
+  const hoy=resumenArr(arrHoy()), sem=resumenArr(arrSemana()), mes=resumenArr(movimientosDelMes());
+  const setPeriodo=(p,r)=>{
+    $(`stat${p}In`).textContent=fmtGs(r.ingreso);
+    $(`stat${p}Out`).textContent=fmtGs(r.egreso);
+    $(`stat${p}Net`).textContent=fmtGs(r.ingreso-r.egreso);
+    $(`stat${p}Count`).textContent=r.movimientos;
+  };
+  setPeriodo("Today",hoy); setPeriodo("Week",sem); setPeriodo("Month",mes);
+  $("statMonthTitle").textContent=nombreMes(mesSeleccionado);
+  renderRanking();
+  requestAnimationFrame(renderGraficoMensual);
+}
+function rankingData(){
+  const map=new Map();
+  for(const m of movimientosDelMes()){
+    const k=claveNombre(m.nombre);
+    if(!map.has(k)) map.set(k,{nombre:m.nombre,ingreso:0,egreso:0});
+    const x=map.get(k); x.ingreso+=num(m.ingreso); x.egreso+=num(m.egreso);
+  }
+  return [...map.values()].map(x=>({...x,resultado:x.ingreso-x.egreso}));
+}
+function renderRanking(){
+  const data=rankingData();
+  const bloque=(titulo,key,cls="")=>{
+    const arr=[...data].sort((a,b)=>b[key]-a[key]).slice(0,5);
+    return `<div class="ranking-block"><h4>${titulo}</h4>${arr.length?arr.map((x,i)=>`<div class="rank-row"><span class="rank-pos">${i+1}.</span><span class="rank-name">${escapeHtml(x.nombre)}</span><span class="rank-value ${cls}">${fmtGs(x[key])}</span></div>`).join(""):`<div class="footer-note">Sin datos.</div>`}</div>`;
+  };
+  $("rankingMes").innerHTML=bloque("Mayor carga","ingreso","tag-in")+bloque("Mayor retiro","egreso","tag-out")+bloque("Mayor resultado","resultado","");
+}
+function renderGraficoMensual(){
+  const c=$("monthlyChart"); if(!c) return;
+  const ctx=c.getContext("2d"), rect=c.getBoundingClientRect(), dpr=Math.max(1,window.devicePixelRatio||1);
+  const W=Math.max(300,rect.width), H=300;
+  c.width=Math.round(W*dpr); c.height=Math.round(H*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+
+  const dias=new Date(mesSeleccionado.getFullYear(),mesSeleccionado.getMonth()+1,0).getDate();
+  const rows=Array.from({length:dias},(_,i)=>({dia:i+1,ingreso:0,egreso:0,resultado:0}));
+  for(const m of movimientosDelMes()){
+    const d=Number(String(m.fecha).slice(8,10));
+    if(d>=1&&d<=dias){ rows[d-1].ingreso+=num(m.ingreso); rows[d-1].egreso+=num(m.egreso); rows[d-1].resultado+=num(m.ingreso)-num(m.egreso); }
+  }
+  const vals=rows.flatMap(r=>[r.ingreso,r.egreso,Math.abs(r.resultado)]);
+  const max=Math.max(1,...vals), pad={l:48,r:14,t:16,b:30}, iw=W-pad.l-pad.r, ih=H-pad.t-pad.b;
+
+  const isDark=document.body.classList.contains("dark-mode");
+  ctx.strokeStyle=isDark?"#2a3643":"#dfe7ef"; ctx.lineWidth=1; ctx.fillStyle=isDark?"#9aa8b6":"#6b7280"; ctx.font="11px system-ui";
+  for(let i=0;i<=4;i++){ const y=pad.t+ih*i/4; ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke(); const v=max*(1-i/4); ctx.fillText(numFmt.format(Math.round(v)),4,y+4); }
+  const xFor=i=>pad.l+(rows.length===1?0:iw*i/(rows.length-1));
+  const yFor=v=>pad.t+ih-(Math.max(-max,Math.min(max,v))+max)/(2*max)*ih;
+  // línea central de resultado
+  ctx.strokeStyle=isDark?"#405063":"#c7d2dc"; ctx.beginPath(); ctx.moveTo(pad.l,pad.t+ih/2); ctx.lineTo(W-pad.r,pad.t+ih/2); ctx.stroke();
+
+  const draw=(key,color,absolute=false)=>{
+    ctx.strokeStyle=color; ctx.lineWidth=2; ctx.beginPath();
+    rows.forEach((r,i)=>{ const v=absolute?Math.abs(r[key]):r[key]; const y=key==="resultado"?yFor(v):pad.t+ih-(v/max)*ih; const x=xFor(i); if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+    ctx.stroke();
+  };
+  draw("ingreso","#15803d"); draw("egreso","#b91c1c");
+  // resultado en escala positiva/negativa centrada
+  ctx.strokeStyle="#155b87";ctx.lineWidth=2;ctx.beginPath();
+  rows.forEach((r,i)=>{const x=xFor(i),y=yFor(r.resultado);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();
+
+  ctx.fillStyle=isDark?"#9aa8b6":"#6b7280"; ctx.font="10px system-ui";
+  const step=dias<=16?2:5;
+  rows.forEach((r,i)=>{if(r.dia===1||r.dia===dias||r.dia%step===0){ctx.fillText(String(r.dia),xFor(i)-3,H-8);}});
+}
+function render(){
+  resumenGeneral();
+  renderHistorial();
+  renderPersonas();
+  renderSugerenciasNombres();
+  actualizarUltimoMovimiento();
+  renderEstadisticas();
+  actualizarEstadoSync();
+}
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c])); }
 
 function download(name,content,type){ const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement("a"); a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),500); }
-function exportJson(){ const data=JSON.stringify({version:8,exportado:new Date().toISOString(),usuario:currentUser?.email||null,movimientos:activos()},null,2); download(`backup_movimientos_${hoyISO()}.json`,data,"application/json"); }
+function exportJson(){ const data=JSON.stringify({version:11,exportado:new Date().toISOString(),usuario:currentUser?.email||null,movimientos:activos()},null,2); download(`backup_movimientos_${hoyISO()}.json`,data,"application/json"); }
 function exportCsv(){ const rows=[["Fecha","Nombre","Carga (Gs.)","Retiro (Gs.)","Resultado (Gs.)","Observación"]]; for(const m of activos()) rows.push([m.fecha,m.nombre,m.ingreso||0,m.egreso||0,num(m.ingreso)-num(m.egreso),m.observacion||""]); const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\r\n"); download(`movimientos_${hoyISO()}.csv`,"\uFEFF"+csv,"text/csv;charset=utf-8"); }
 function importarArchivo(file){
   const reader=new FileReader(); reader.onload=()=>{ try{ const obj=JSON.parse(reader.result),arr=Array.isArray(obj)?obj:obj.movimientos; if(!Array.isArray(arr)) throw new Error(); if(!confirm(`Se importarán ${arr.length} movimientos y reemplazarán los actuales. ¿Continuar?`)) return; movimientos=arr.map(m=>normalizarMovimiento({...m,user_id:currentUser.id,updated_at:ahoraISO(),deleted:false},true)); guardarLocal(); programarSync(); alert("Backup importado correctamente. Se sincronizará con tu cuenta."); }catch{alert("No se pudo importar el archivo.");} }; reader.readAsText(file);
+}
+
+
+function generarPdfMensual(){
+  const jsPDF=window.jspdf?.jsPDF;
+  if(!jsPDF){
+    alert("No se pudo cargar el generador de PDF. Conectate a internet e intentá nuevamente.");
+    return;
+  }
+  const arr=movimientosDelMes().sort((a,b)=>(a.fecha||"").localeCompare(b.fecha||"")||(a.creado||0)-(b.creado||0));
+  const r=resumenArr(arr), ranking=rankingData().sort((a,b)=>b.resultado-a.resultado);
+  const doc=new jsPDF({unit:"mm",format:"a4"});
+  const left=14, right=196, width=right-left;
+  let y=16;
+  const addText=(txt,size=10,bold=false)=>{
+    doc.setFont("helvetica",bold?"bold":"normal"); doc.setFontSize(size);
+    const lines=doc.splitTextToSize(String(txt),width);
+    doc.text(lines,left,y); y+=lines.length*(size*0.42)+2;
+  };
+  const pageCheck=(need=14)=>{ if(y+need>282){ doc.addPage(); y=16; } };
+  addText("Control de Movimientos",18,true);
+  addText(`Reporte mensual · ${nombreMes(mesSeleccionado)}`,12,true);
+  addText(`Generado: ${new Intl.DateTimeFormat("es-PY",{dateStyle:"medium",timeStyle:"short"}).format(new Date())}`,9,false);
+  y+=2;
+  addText(`Cargas: ${fmtGs(r.ingreso)}   |   Retiros: ${fmtGs(r.egreso)}   |   Resultado: ${fmtGs(r.ingreso-r.egreso)}   |   Movimientos: ${r.movimientos}`,10,true);
+  y+=4;
+  addText("Resumen por jugador",12,true);
+  const persons=rankingData().sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
+  if(!persons.length) addText("Sin movimientos en este mes.",10);
+  for(const p of persons){
+    pageCheck(8);
+    addText(`${p.nombre} — Cargas ${fmtGs(p.ingreso)} · Retiros ${fmtGs(p.egreso)} · Resultado ${fmtGs(p.resultado)}`,9,false);
+  }
+  y+=3;
+  pageCheck(20); addText("Ranking del mes",12,true);
+  ranking.slice(0,5).forEach((p,i)=>{ pageCheck(7); addText(`${i+1}. ${p.nombre} — ${fmtGs(p.resultado)}`,9,false); });
+  y+=3;
+  pageCheck(20); addText("Detalle de movimientos",12,true);
+  for(const m of arr){
+    pageCheck(9);
+    const tipo=m.ingreso?`Carga ${fmtGs(m.ingreso)}`:`Retiro ${fmtGs(m.egreso)}`;
+    const obs=m.observacion?` · ${m.observacion}`:"";
+    addText(`${fechaPY(m.fecha)} · ${m.nombre} · ${tipo}${obs}`,9,false);
+  }
+  const ym=`${mesSeleccionado.getFullYear()}-${String(mesSeleccionado.getMonth()+1).padStart(2,"0")}`;
+  doc.save(`reporte_movimientos_${ym}.pdf`);
 }
 
 function setAuthMsg(msg,show=true){ $("authMsg").textContent=msg; $("authMsg").style.display=show?"block":"none"; }
@@ -421,7 +698,7 @@ async function sincronizarTodo(){
     render();
 
   }catch(err){
-    console.error("V10 sync:",err);
+    console.error("V11 sync:",err);
     actualizarEstadoSync("Error de sincronización","error");
   }finally{
     syncBusy=false;
@@ -494,7 +771,7 @@ async function validarCuentaActual({silencioso=false}={}){
         await bloquearCuentaLocal(currentUser.id);
         return false;
       }
-      if(!silencioso) console.warn("V10 validación de cuenta:",error);
+      if(!silencioso) console.warn("V11 validación de cuenta:",error);
       return true;
     }
 
@@ -521,7 +798,7 @@ async function validarCuentaActual({silencioso=false}={}){
     mostrarApp();
     return true;
   }catch(err){
-    if(!silencioso) console.warn("V10 validación de cuenta:",err);
+    if(!silencioso) console.warn("V11 validación de cuenta:",err);
     return true;
   }finally{
     authCheckBusy=false;
@@ -538,7 +815,7 @@ function iniciarControlDeAcceso(){
 
 async function iniciarSesionGuardada(){
   sb=crearCliente();
-  if(!sb){ mostrarAuth(); setAuthMsg("V10 está lista, pero falta conectar Supabase. Completá SUPABASE_URL y SUPABASE_PUBLISHABLE_KEY en supabase-config.js."); return; }
+  if(!sb){ mostrarAuth(); setAuthMsg("V11 está lista, pero falta conectar Supabase. Completá SUPABASE_URL y SUPABASE_PUBLISHABLE_KEY en supabase-config.js."); return; }
 
   let recoveryDetected=esRetornoRecuperacion();
 
@@ -597,7 +874,7 @@ async function iniciarSesionGuardada(){
       }
     }
   }catch(err){
-    console.warn("V10 inicio de sesión guardada:",err);
+    console.warn("V11 inicio de sesión guardada:",err);
   }
 
   if(!navigator.onLine){
@@ -634,6 +911,8 @@ document.addEventListener("DOMContentLoaded",()=>{
   $("saveNewPasswordBtn").addEventListener("click",guardarNuevaPassword);
   $("newPasswordConfirm").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();guardarNuevaPassword();}});
   $("profileBtn").addEventListener("click",abrirPerfil);
+  $("themeToggle").addEventListener("click",alternarTema);
+  cargarTema();
   $("saveProfileBtn").addEventListener("click",guardarPerfil);
   $("cancelProfileBtn").addEventListener("click",()=>$("profileDialog").close());
   $("profileApellido").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();guardarPerfil();}});
@@ -643,7 +922,15 @@ document.addEventListener("DOMContentLoaded",()=>{
   $("nextMonth").addEventListener("click",()=>{mesSeleccionado=new Date(mesSeleccionado.getFullYear(),mesSeleccionado.getMonth()+1,1);render();});
   $("agregar").addEventListener("click",agregarMovimiento); $("limpiar").addEventListener("click",()=>{$("nombre").value="";$("ingreso").value="";$("egreso").value="";$("obs").value="";$("fecha").value=hoyISO();$("nombre").focus();});
   $("buscar").addEventListener("input",renderHistorial); $("filtroTipo").addEventListener("change",renderHistorial); $("buscarPersona").addEventListener("input",renderPersonas);
-  document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".section").forEach(x=>x.classList.remove("active"));btn.classList.add("active");$(btn.dataset.tab).classList.add("active");}));
+  $("nombre").addEventListener("input",actualizarUltimoMovimiento);
+  $("nombre").addEventListener("change",actualizarUltimoMovimiento);
+  $("exportPdf").addEventListener("click",generarPdfMensual);
+  $("playerMonthBtn").addEventListener("click",()=>{playerScope="month";renderJugadorDialog();});
+  $("playerAllBtn").addEventListener("click",()=>{playerScope="all";renderJugadorDialog();});
+  $("closePlayerBtn").addEventListener("click",()=>$("playerDialog").close());
+  $("usePlayerBtn").addEventListener("click",()=>{if(playerActual){$("playerDialog").close();elegirNombre(playerActual);document.querySelector('[data-tab="historial"]')?.click();window.scrollTo({top:0,behavior:"smooth"});}});
+  window.addEventListener("resize",()=>{if($("estadisticas")?.classList.contains("active")) requestAnimationFrame(renderGraficoMensual);});
+  document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".section").forEach(x=>x.classList.remove("active"));btn.classList.add("active");$(btn.dataset.tab).classList.add("active");if(btn.dataset.tab==="estadisticas")requestAnimationFrame(renderGraficoMensual);}));
   $("exportJson").addEventListener("click",exportJson); $("exportCsv").addEventListener("click",exportCsv); $("importJson").addEventListener("click",()=>$("fileImport").click()); $("fileImport").addEventListener("change",e=>{if(e.target.files[0])importarArchivo(e.target.files[0]);e.target.value="";});
   $("borrarTodo").addEventListener("click",()=>{if(confirm("¿Seguro que querés borrar TODOS los movimientos de esta cuenta?")){for(const m of movimientos){if(!m.deleted){m.deleted=true;m.updated_at=ahoraISO();m.sync_status="pending";}}guardarLocal();programarSync();}});
   $("guardarEdicion").addEventListener("click",guardarEdicion); $("cancelarEdicion").addEventListener("click",()=>$("editDialog").close());
@@ -654,6 +941,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&currentUser?.id) validarCuentaActual({silencioso:true});});
   window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;$("installBanner").style.display="block";});
   $("installBtn").addEventListener("click",async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBanner").style.display="none";});
-  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=10",{updateViaCache:"none"}).catch(()=>{});
+  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=11.1",{updateViaCache:"none"}).catch(()=>{});
   iniciarSesionGuardada();
 });

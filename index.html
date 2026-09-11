@@ -137,8 +137,176 @@
 .account-email{font-size:12px;opacity:.72;font-weight:400}
 .auth-link{display:block;width:100%;margin-top:10px;background:none;border:0;color:inherit;opacity:.8;text-decoration:underline;cursor:pointer;font:inherit}
 .auth-link:hover{opacity:1}
+
+    /* V11 */
+    .quick-today{
+      margin:0 0 16px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;
+      background:#fff;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+      box-shadow:var(--shadow)
+    }
+    .quick-today strong{color:var(--primary)}
+    .quick-today .today-values{display:flex;gap:14px;flex-wrap:wrap;font-size:13px}
+    .quick-today .today-values b{font-variant-numeric:tabular-nums}
+    .name-wrap{position:relative}
+    .name-hint{margin-top:6px;font-size:12px;color:var(--muted);min-height:18px}
+    .recent-names{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+    .name-chip{
+      border:1px solid var(--line);background:#f8fbfd;color:var(--primary);
+      padding:6px 9px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer
+    }
+    .name-chip:hover{background:#eaf3f8}
+    .person{padding:0;overflow:hidden}
+    .person-head{padding:12px;cursor:pointer}
+    .person-head:hover{background:#f8fbfd}
+    .person-title-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .person-title-row strong{margin:0}
+    .person-expand{font-size:18px;color:var(--muted);transition:.2s transform}
+    .person.open .person-expand{transform:rotate(180deg)}
+    .person-details{display:none;border-top:1px solid var(--line);padding:10px 12px;background:#fbfdff}
+    .person.open .person-details{display:block}
+    .person-detail-row{
+      display:grid;grid-template-columns:82px 1fr 1fr;gap:8px;
+      padding:7px 0;border-bottom:1px dashed #e8eef3;font-size:12px;align-items:center
+    }
+    .person-detail-row:last-child{border-bottom:0}
+    .person-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+    .person-actions button{font-size:12px;padding:8px 10px}
+    .stats-periods{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+    @media(max-width:760px){.stats-periods{grid-template-columns:1fr}}
+    .period-card{border:1px solid var(--line);border-radius:14px;background:#fff;padding:14px}
+    .period-card h3{margin:0 0 10px;color:var(--primary);font-size:15px}
+    .period-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px}
+    .period-grid span{color:var(--muted)}
+    .period-grid b{text-align:right;font-variant-numeric:tabular-nums}
+    .analytics-grid{display:grid;grid-template-columns:1.4fr .9fr;gap:14px}
+    @media(max-width:820px){.analytics-grid{grid-template-columns:1fr}}
+    .subcard{border:1px solid var(--line);border-radius:14px;padding:14px;background:#fff}
+    .subcard h3{margin:0 0 12px;color:var(--primary);font-size:15px}
+    #monthlyChart{width:100%;height:300px;display:block}
+    .chart-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+    .legend-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px}
+    .legend-in{background:#15803d}.legend-out{background:#b91c1c}.legend-net{background:#155b87}
+    .ranking-block{margin-bottom:14px}
+    .ranking-block:last-child{margin-bottom:0}
+    .ranking-block h4{margin:0 0 7px;font-size:13px;color:var(--text)}
+    .rank-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #edf1f5;font-size:12px}
+    .rank-row:last-child{border-bottom:0}
+    .rank-pos{display:inline-flex;width:22px;color:var(--muted);font-weight:800}
+    .rank-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .rank-value{font-weight:800;font-variant-numeric:tabular-nums}
+    .report-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+    .player-stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+    @media(max-width:520px){.player-stat-grid{grid-template-columns:1fr 1fr}}
+    .mini-stat{border:1px solid var(--line);border-radius:12px;padding:10px;background:#fbfdff}
+    .mini-stat small{display:block;color:var(--muted);margin-bottom:5px}
+    .mini-stat b{font-size:15px;font-variant-numeric:tabular-nums}
+    .player-history{max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:12px}
+    .player-history-row{display:grid;grid-template-columns:86px 1fr 1fr;gap:8px;padding:9px 10px;border-bottom:1px solid #edf1f5;font-size:12px}
+    .player-history-row:last-child{border-bottom:0}
+    .duplicate-warning{font-size:12px;color:var(--warning);margin-top:6px}
+
+
+    /* V11.1 Dark mode */
+    :root{
+      --bg:#f3f7fa;
+      --surface:#ffffff;
+      --surface-soft:#f8fbfd;
+      --surface-alt:#fbfdff;
+      --text:#16212b;
+      --muted:#6b7280;
+      --line:#dfe7ef;
+      --primary:#155b87;
+      --primary-soft:#eaf3f8;
+      --success:#15803d;
+      --danger:#b91c1c;
+      --warning:#a16207;
+      --shadow:0 8px 24px rgba(15,23,42,.08);
+    }
+    body.dark-mode{
+      --bg:#0f141a;
+      --surface:#171e26;
+      --surface-soft:#1c2530;
+      --surface-alt:#141b22;
+      --text:#edf3f8;
+      --muted:#9aa8b6;
+      --line:#2a3643;
+      --primary:#67b7e6;
+      --primary-soft:#163246;
+      --success:#5bd08a;
+      --danger:#ff7b7b;
+      --warning:#f4c15d;
+      --shadow:0 8px 24px rgba(0,0,0,.35);
+      background:var(--bg);
+      color:var(--text);
+    }
+    body.dark-mode .card,
+    body.dark-mode .quick-today,
+    body.dark-mode .period-card,
+    body.dark-mode .subcard,
+    body.dark-mode dialog .modal{
+      background:var(--surface)!important;
+      border-color:var(--line)!important;
+      color:var(--text);
+    }
+    body.dark-mode input,
+    body.dark-mode select,
+    body.dark-mode textarea{
+      background:#101820;
+      color:var(--text);
+      border-color:var(--line);
+    }
+    body.dark-mode input::placeholder,
+    body.dark-mode textarea::placeholder{color:#718090}
+    body.dark-mode .btn-secondary,
+    body.dark-mode .name-chip{
+      background:var(--surface-soft);
+      color:var(--text);
+      border-color:var(--line);
+    }
+    body.dark-mode .btn-secondary:hover,
+    body.dark-mode .name-chip:hover{background:#24303c}
+    body.dark-mode .tabs{background:var(--surface)}
+    body.dark-mode .tab{color:var(--muted)}
+    body.dark-mode .tab.active{color:var(--primary);background:var(--primary-soft)}
+    body.dark-mode table{color:var(--text)}
+    body.dark-mode th{background:#111920;color:#aebbc7}
+    body.dark-mode td{border-color:var(--line)}
+    body.dark-mode tr:hover td{background:#17212b}
+    body.dark-mode .person-head:hover{background:#1d2833}
+    body.dark-mode .person-details{background:var(--surface-alt);border-color:var(--line)}
+    body.dark-mode .person-detail-row,
+    body.dark-mode .rank-row,
+    body.dark-mode .player-history-row{border-color:#283543}
+    body.dark-mode .mini-stat{background:var(--surface-alt);border-color:var(--line)}
+    body.dark-mode .player-history{border-color:var(--line)}
+    body.dark-mode .footer-note,
+    body.dark-mode label,
+    body.dark-mode small{color:var(--muted)}
+    body.dark-mode .summary .box,
+    body.dark-mode .summary-box{background:var(--surface-soft)}
+    body.dark-mode dialog::backdrop{background:rgba(0,0,0,.7)}
+    .theme-toggle{
+      display:inline-flex;align-items:center;gap:7px;
+      border:1px solid var(--line);background:var(--surface);color:var(--text);
+      padding:9px 12px;border-radius:12px;font-weight:700;cursor:pointer
+    }
+    .theme-toggle:hover{background:var(--surface-soft)}
+    .theme-icon{font-size:16px;line-height:1}
+
+
+html.dark-preload body{background:#0f141a;color:#edf3f8}
 </style>
 
+
+<script>
+(function(){
+  try{
+    if(localStorage.getItem("control_movimientos_theme")==="dark"){
+      document.documentElement.classList.add("dark-preload");
+    }
+  }catch(e){}
+})();
+</script>
 </head>
 <body>
 
@@ -188,6 +356,16 @@
     </div>
   </div>
 
+  <div class="quick-today">
+    <strong>Actividad de hoy</strong>
+    <div class="today-values">
+      <span><b id="todayCount">0</b> movimientos</span>
+      <span>Cargas: <b class="tag-in" id="todayIn">Gs. 0</b></span>
+      <span>Retiros: <b class="tag-out" id="todayOut">Gs. 0</b></span>
+      <span>Resultado: <b id="todayNet">Gs. 0</b></span>
+    </div>
+  </div>
+
   <div class="grid">
     <section class="card">
       <h2>Carga rápida</h2>
@@ -196,9 +374,12 @@
           <label for="fecha">Fecha</label>
           <input id="fecha" type="date">
         </div>
-        <div>
+        <div class="name-wrap">
           <label for="nombre">Nombre</label>
-          <input id="nombre" placeholder="Ej.: Ezequiel Palacios" autocomplete="off">
+          <input id="nombre" placeholder="Ej.: Ezequiel Palacios" autocomplete="off" list="nombresGuardados">
+          <datalist id="nombresGuardados"></datalist>
+          <div id="lastPlayerMove" class="name-hint"></div>
+          <div id="recentNames" class="recent-names"></div>
         </div>
         <div>
           <label for="ingreso">Carga (Gs.)</label>
@@ -237,7 +418,8 @@
 
   <div class="tabs">
     <button class="tab active" data-tab="historial">Historial</button>
-    <button class="tab" data-tab="personas">Resumen por persona</button>
+    <button class="tab" data-tab="personas">Jugadores</button>
+    <button class="tab" data-tab="estadisticas">Estadísticas</button>
     <button class="tab" data-tab="backup">Backup / Exportar</button>
   </div>
 
@@ -269,6 +451,64 @@
     </div>
     <div class="name-summary" id="resumenPersonas"></div>
     <div class="empty" id="emptyPersonas">Todavía no hay personas para resumir.</div>
+  </section>
+
+
+  <section id="estadisticas" class="section card">
+    <h2>Estadísticas generales</h2>
+    <div class="stats-periods">
+      <div class="period-card">
+        <h3>Hoy</h3>
+        <div class="period-grid">
+          <span>Cargas</span><b class="tag-in" id="statTodayIn">Gs. 0</b>
+          <span>Retiros</span><b class="tag-out" id="statTodayOut">Gs. 0</b>
+          <span>Resultado</span><b id="statTodayNet">Gs. 0</b>
+          <span>Movimientos</span><b id="statTodayCount">0</b>
+        </div>
+      </div>
+      <div class="period-card">
+        <h3>Esta semana</h3>
+        <div class="period-grid">
+          <span>Cargas</span><b class="tag-in" id="statWeekIn">Gs. 0</b>
+          <span>Retiros</span><b class="tag-out" id="statWeekOut">Gs. 0</b>
+          <span>Resultado</span><b id="statWeekNet">Gs. 0</b>
+          <span>Movimientos</span><b id="statWeekCount">0</b>
+        </div>
+      </div>
+      <div class="period-card">
+        <h3 id="statMonthTitle">Mes seleccionado</h3>
+        <div class="period-grid">
+          <span>Cargas</span><b class="tag-in" id="statMonthIn">Gs. 0</b>
+          <span>Retiros</span><b class="tag-out" id="statMonthOut">Gs. 0</b>
+          <span>Resultado</span><b id="statMonthNet">Gs. 0</b>
+          <span>Movimientos</span><b id="statMonthCount">0</b>
+        </div>
+      </div>
+    </div>
+
+    <div class="analytics-grid">
+      <div class="subcard">
+        <h3>Gráfico del mes</h3>
+        <canvas id="monthlyChart" aria-label="Gráfico mensual de cargas, retiros y resultado"></canvas>
+        <div class="chart-legend">
+          <span><i class="legend-dot legend-in"></i>Cargas</span>
+          <span><i class="legend-dot legend-out"></i>Retiros</span>
+          <span><i class="legend-dot legend-net"></i>Resultado</span>
+        </div>
+      </div>
+      <div class="subcard">
+        <h3>Ranking del mes</h3>
+        <div id="rankingMes"></div>
+      </div>
+    </div>
+
+    <div class="subcard" style="margin-top:14px">
+      <h3>Reporte mensual</h3>
+      <div class="report-actions">
+        <button class="btn-primary" id="exportPdf">Generar PDF mensual</button>
+      </div>
+      <div class="footer-note">Incluye resumen general, ranking por jugador y detalle de movimientos del mes seleccionado.</div>
+    </div>
   </section>
 
   <section id="backup" class="section card">
@@ -330,6 +570,23 @@
 </dialog>
 
 
+
+<dialog id="playerDialog">
+  <div class="modal">
+    <h3 id="playerDialogTitle">Estadísticas del jugador</h3>
+    <div class="actions" style="margin-top:0">
+      <button class="btn-secondary btn-small" id="playerMonthBtn" type="button">Este mes</button>
+      <button class="btn-secondary btn-small" id="playerAllBtn" type="button">Todo el historial</button>
+    </div>
+    <div id="playerStats" class="player-stat-grid"></div>
+    <div id="playerHistory" class="player-history"></div>
+    <div class="actions">
+      <button class="btn-primary" id="usePlayerBtn" type="button">Nueva carga / retiro</button>
+      <button class="btn-secondary" id="closePlayerBtn" type="button">Cerrar</button>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="forgotDialog">
   <div class="modal">
     <h3>Recuperar contraseña</h3>
@@ -361,7 +618,8 @@
 </dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase-config.js?v=10"></script>
-<script src="app.js?v=10"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script src="supabase-config.js?v=11.1"></script>
+<script src="app.js?v=11.1"></script>
 </body>
 </html>
