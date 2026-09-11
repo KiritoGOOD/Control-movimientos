@@ -901,6 +901,31 @@ async function iniciarSesionGuardada(){
   mostrarAuth();
 }
 
+
+const THEME_KEY="control_movimientos_theme";
+function aplicarTema(theme){
+  const dark=theme==="dark";
+  document.body.classList.toggle("dark-mode",dark);
+  document.documentElement.classList.remove("dark-preload");
+  const icon=$("themeIcon"), label=$("themeLabel");
+  const authIcon=$("authThemeIcon"), authLabel=$("authThemeLabel");
+  if(icon) icon.textContent=dark?"☀":"☾";
+  if(label) label.textContent=dark?"Modo claro":"Modo oscuro";
+  if(authIcon) authIcon.textContent=dark?"☀":"☾";
+  if(authLabel) authLabel.textContent=dark?"Modo claro":"Modo oscuro";
+  if($("estadisticas")?.classList.contains("active")) requestAnimationFrame(renderGraficoMensual);
+}
+function cargarTema(){
+  let theme="light";
+  try{ theme=localStorage.getItem(THEME_KEY)||"light"; }catch{}
+  aplicarTema(theme);
+}
+function alternarTema(){
+  const next=document.body.classList.contains("dark-mode")?"light":"dark";
+  try{ localStorage.setItem(THEME_KEY,next); }catch{}
+  aplicarTema(next);
+}
+
 document.addEventListener("DOMContentLoaded",()=>{
   $("fecha").value=hoyISO(); ["ingreso","egreso","eIngreso","eEgreso"].forEach(activarFormatoGs);
   $("tabLogin").addEventListener("click",()=>cambiarAuthTab("login")); $("tabRegister").addEventListener("click",()=>cambiarAuthTab("register"));
@@ -912,6 +937,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   $("newPasswordConfirm").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();guardarNuevaPassword();}});
   $("profileBtn").addEventListener("click",abrirPerfil);
   if($("themeToggle")) $("themeToggle").addEventListener("click",alternarTema);
+  if($("authThemeToggle")) $("authThemeToggle").addEventListener("click",alternarTema);
   cargarTema();
   $("saveProfileBtn").addEventListener("click",guardarPerfil);
   $("cancelProfileBtn").addEventListener("click",()=>$("profileDialog").close());
@@ -941,6 +967,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&currentUser?.id) validarCuentaActual({silencioso:true});});
   window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;$("installBanner").style.display="block";});
   $("installBtn").addEventListener("click",async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBanner").style.display="none";});
-  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=11.1.1",{updateViaCache:"none"}).catch(()=>{});
+  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=11.2",{updateViaCache:"none"}).catch(()=>{});
   iniciarSesionGuardada();
 });

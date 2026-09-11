@@ -295,6 +295,9 @@
 
 
 html.dark-preload body{background:#0f141a;color:#edf3f8}
+
+.auth-theme-row{display:flex;justify-content:flex-end;margin-bottom:12px}
+.auth-theme-row .theme-toggle{padding:8px 10px;font-size:12px}
 </style>
 
 
@@ -314,7 +317,11 @@ html.dark-preload body{background:#0f141a;color:#edf3f8}
   <div class="auth-card">
     <h1>Control de Movimientos</h1>
     <p>Ingresá con tu cuenta para recuperar y sincronizar tus datos en cualquier dispositivo.</p>
-    <div class="auth-tabs">
+    <div class="auth-theme-row">
+<button class="theme-toggle" id="authThemeToggle" type="button" aria-label="Cambiar tema">
+<span class="theme-icon" id="authThemeIcon">☾</span><span id="authThemeLabel">Modo oscuro</span>
+</button></div>
+<div class="auth-tabs">
       <button type="button" id="tabLogin" class="active">Iniciar sesión</button>
       <button type="button" id="tabRegister">Crear cuenta</button>
     </div>
@@ -625,7 +632,7 @@ html.dark-preload body{background:#0f141a;color:#edf3f8}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-<script src="supabase-config.js?v=11.1.1"></script>
-<script src="app.js?v=11.1.1"></script>
+<script src="supabase-config.js?v=11.2"></script>
+<script src="app.js?v=11.2"></script>
 </body>
 </html>
