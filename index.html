@@ -298,6 +298,73 @@ html.dark-preload body{background:#0f141a;color:#edf3f8}
 
 .auth-theme-row{display:flex;justify-content:flex-end;margin-bottom:12px}
 .auth-theme-row .theme-toggle{padding:8px 10px;font-size:12px}
+
+/* V11.3 — contraste mejorado en modo oscuro */
+body.dark-mode .topbar{
+  background:#121922!important;
+  color:#edf3f8!important;
+  border-color:#2a3643!important;
+}
+body.dark-mode .topbar h1,
+body.dark-mode .topbar .title,
+body.dark-mode .topbar .account-name,
+body.dark-mode .topbar .account-email,
+body.dark-mode .topbar p{color:#edf3f8!important}
+body.dark-mode .topbar .subtitle{color:#9aa8b6!important}
+body.dark-mode .sync-badge{
+  background:#143322!important;
+  color:#79e0a5!important;
+  border-color:#214a32!important;
+}
+body.dark-mode .card,
+body.dark-mode .quick-today,
+body.dark-mode .section,
+body.dark-mode .period-card,
+body.dark-mode .subcard{
+  background:#171e26!important;
+  color:#edf3f8!important;
+  border-color:#2a3643!important;
+}
+body.dark-mode table,
+body.dark-mode tbody,
+body.dark-mode tr,
+body.dark-mode td{
+  background:#171e26!important;
+  color:#edf3f8!important;
+  border-color:#2a3643!important;
+}
+body.dark-mode thead,
+body.dark-mode th{
+  background:#111820!important;
+  color:#b8c4cf!important;
+  border-color:#2a3643!important;
+}
+body.dark-mode tbody tr:nth-child(even) td{background:#151c24!important}
+body.dark-mode tbody tr:hover td{background:#1d2833!important}
+body.dark-mode .tag-in{color:#66d896!important}
+body.dark-mode .tag-out{color:#ff8585!important}
+body.dark-mode .person{background:#171e26!important;border-color:#2a3643!important}
+body.dark-mode .person-head{background:#171e26!important}
+body.dark-mode .person-head:hover{background:#1d2833!important}
+body.dark-mode .person-details,
+body.dark-mode .mini-stat,
+body.dark-mode .player-history,
+body.dark-mode .player-history-row{
+  background:#121922!important;
+  color:#edf3f8!important;
+  border-color:#2a3643!important;
+}
+body.dark-mode .empty{color:#9aa8b6!important}
+body.dark-mode .summary-box,
+body.dark-mode .summary .box{
+  background:#121922!important;
+  border-color:#2a3643!important;
+}
+.profile-separator{border-top:1px solid var(--line);margin:18px 0}
+.profile-help{font-size:12px;color:var(--muted);margin-top:5px}
+body.dark-mode .profile-separator{border-top-color:#2a3643}
+body.dark-mode .profile-help{color:#9aa8b6}
+
 </style>
 
 
@@ -574,6 +641,22 @@ html.dark-preload body{background:#0f141a;color:#edf3f8}
       <div><label for="profileApellido">Apellido</label><input id="profileApellido" type="text" autocomplete="family-name"></div>
       <div style="grid-column:1/-1"><label>Email</label><input id="profileEmail" type="email" disabled></div>
     </div>
+    
+    <div class="profile-separator"></div>
+    <h4 style="margin:0 0 10px">Cambiar contraseña</h4>
+    <div>
+      <label for="profileNewPassword">Nueva contraseña</label>
+      <input id="profileNewPassword" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+    </div>
+    <div style="margin-top:10px">
+      <label for="profileConfirmPassword">Confirmar nueva contraseña</label>
+      <input id="profileConfirmPassword" type="password" placeholder="Repetí la nueva contraseña" autocomplete="new-password">
+    </div>
+    <div class="profile-help">Necesitás conexión a internet para actualizarla.</div>
+    <div class="actions">
+      <button class="btn-primary" id="changePasswordBtn" type="button">Actualizar contraseña</button>
+    </div>
+
     <div class="actions">
       <button class="btn-primary" id="saveProfileBtn" type="button">Guardar</button>
       <button class="btn-secondary" id="cancelProfileBtn" type="button">Cancelar</button>
@@ -632,7 +715,7 @@ html.dark-preload body{background:#0f141a;color:#edf3f8}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-<script src="supabase-config.js?v=11.2"></script>
-<script src="app.js?v=11.2"></script>
+<script src="supabase-config.js?v=11.3"></script>
+<script src="app.js?v=11.3"></script>
 </body>
 </html>

@@ -554,6 +554,8 @@ async function abrirPerfil(){
   $("profileEmail").value=currentUser.email||"";
   $("profileMsg").textContent="";
   $("profileDialog").showModal();
+  if($("profileNewPassword")) $("profileNewPassword").value="";
+  if($("profileConfirmPassword")) $("profileConfirmPassword").value="";
 }
 async function guardarPerfil(){
   if(!sb||!currentUser) return;
@@ -575,6 +577,52 @@ async function guardarPerfil(){
   mostrarApp();
   $("profileDialog").close();
 }
+
+async function cambiarPasswordDesdePerfil(){
+  if(!sb || !currentUser){ alert("No hay una sesión activa."); return; }
+  if(!navigator.onLine){ alert("Necesitás conexión a internet para cambiar la contraseña."); return; }
+
+  const p1=$("profileNewPassword").value;
+  const p2=$("profileConfirmPassword").value;
+
+  if(p1.length<6){
+    alert("La nueva contraseña debe tener al menos 6 caracteres.");
+    $("profileNewPassword").focus();
+    return;
+  }
+  if(p1!==p2){
+    alert("Las contraseñas no coinciden.");
+    $("profileConfirmPassword").focus();
+    return;
+  }
+
+  const btn=$("changePasswordBtn");
+  const original=btn.textContent;
+  btn.disabled=true;
+  btn.textContent="Actualizando...";
+
+  try{
+    const {data:userData,error:userError}=await sb.auth.getUser();
+    if(userError || !userData?.user){
+      alert("Tu sesión ya no es válida. Cerrá sesión y volvé a ingresar.");
+      return;
+    }
+
+    const {error}=await sb.auth.updateUser({password:p1});
+    if(error) throw error;
+
+    $("profileNewPassword").value="";
+    $("profileConfirmPassword").value="";
+    alert("Contraseña actualizada correctamente.");
+  }catch(err){
+    console.error("V11.3 password:",err);
+    alert(err?.message || "No se pudo actualizar la contraseña.");
+  }finally{
+    btn.disabled=false;
+    btn.textContent=original;
+  }
+}
+
 async function logout(){
   clearInterval(authCheckTimer);
   if(!confirm("¿Cerrar sesión en este dispositivo?")) return;
@@ -940,6 +988,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   if($("authThemeToggle")) $("authThemeToggle").addEventListener("click",alternarTema);
   cargarTema();
   $("saveProfileBtn").addEventListener("click",guardarPerfil);
+  $("changePasswordBtn").addEventListener("click",cambiarPasswordDesdePerfil);
   $("cancelProfileBtn").addEventListener("click",()=>$("profileDialog").close());
   $("profileApellido").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();guardarPerfil();}});
   $("loginBtn").addEventListener("click",login); $("registerPasswordConfirm").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();register();}}); $("registerBtn").addEventListener("click",register); $("logoutBtn").addEventListener("click",logout); $("syncNow").addEventListener("click",sincronizarTodo);
@@ -967,6 +1016,6 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&currentUser?.id) validarCuentaActual({silencioso:true});});
   window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;$("installBanner").style.display="block";});
   $("installBtn").addEventListener("click",async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;$("installBanner").style.display="none";});
-  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=11.2",{updateViaCache:"none"}).catch(()=>{});
+  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js?v=11.3",{updateViaCache:"none"}).catch(()=>{});
   iniciarSesionGuardada();
 });
